@@ -10,10 +10,11 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || 'password',
 });
 
-// Функция для создания таблицы при первом запуске
+// Функция для создания таблиц при первом запуске
 const createTable = async () => {
   try {
-    const query = `
+    // Таблица пользовательских данных
+    const userDataQuery = `
       CREATE TABLE IF NOT EXISTS user_data (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         name VARCHAR(255) NOT NULL,
@@ -25,10 +26,30 @@ const createTable = async () => {
       );
     `;
     
-    await pool.query(query);
+    // Таблица для VK сообщений
+    const vkMessagesQuery = `
+      CREATE TABLE IF NOT EXISTS vk_messages (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        vk_message_id INTEGER NOT NULL,
+        vk_user_id INTEGER NOT NULL,
+        user_name VARCHAR(255),
+        message_text TEXT NOT NULL,
+        message_type VARCHAR(50) DEFAULT 'message',
+        peer_id INTEGER,
+        conversation_message_id INTEGER,
+        timestamp INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(vk_message_id)
+      );
+    `;
+    
+    await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
+    
+    await pool.query(vkMessagesQuery);
+    console.log('✅ Таблица vk_messages создана или уже существует');
   } catch (error) {
-    console.error('❌ Ошибка при создании таблицы:', error);
+    console.error('❌ Ошибка при создании таблиц:', error);
   }
 };
 
