@@ -1,0 +1,252 @@
+.vk-messages {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 30px;
+  background: linear-gradient(135deg, #4c75a3, #5c85bd);
+  border-radius: 12px;
+  box-shadow: 0 4px 20px rgba(76, 117, 163, 0.3);
+  margin-bottom: 30px;
+  color: white;
+}
+
+.vk-messages-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 25px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.vk-messages-header h2 {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 600;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.vk-messages-controls {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex-wrap: wrap;
+}
+
+.refresh-button {
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.refresh-button:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.3);
+  border-color: rgba(255, 255, 255, 0.5);
+  transform: translateY(-2px);
+}
+
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.last-update {
+  font-size: 12px;
+  opacity: 0.8;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+
+.error-message {
+  background: rgba(220, 53, 69, 0.2);
+  border: 1px solid rgba(220, 53, 69, 0.5);
+  color: #ffebee;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 20px;
+  font-weight: 500;
+}
+
+.no-messages {
+  text-align: center;
+  padding: 40px 20px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  margin: 20px 0;
+}
+
+.no-messages p {
+  margin: 10px 0;
+  font-size: 18px;
+}
+
+.no-messages-hint {
+  font-size: 14px !important;
+  opacity: 0.8;
+}
+
+.messages-container {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+
+.messages-info {
+  margin-bottom: 20px;
+  font-size: 16px;
+  padding-bottom: 15px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.auto-refresh {
+  font-size: 14px;
+  opacity: 0.8;
+  margin-left: 10px;
+}
+
+.messages-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.message-item {
+  background: rgba(255, 255, 255, 0.95);
+  color: #333;
+  border-radius: 10px;
+  padding: 20px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border-left: 4px solid #4c75a3;
+}
+
+.message-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+}
+
+.message-item.wall_comment {
+  border-left-color: #28a745;
+}
+
+.message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
+}
+
+.message-type {
+  font-weight: 600;
+  color: #4c75a3;
+  font-size: 16px;
+}
+
+.message-item.wall_comment .message-type {
+  color: #28a745;
+}
+
+.message-time {
+  font-size: 14px;
+  color: #666;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+.message-content {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.message-author {
+  font-weight: 500;
+  color: #495057;
+  font-size: 15px;
+}
+
+.message-text {
+  background: #f8f9fa;
+  padding: 12px 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  line-height: 1.5;
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  border-left: 3px solid #4c75a3;
+}
+
+.message-item.wall_comment .message-text {
+  border-left-color: #28a745;
+}
+
+.message-text em {
+  color: #999;
+  font-style: italic;
+}
+
+.message-meta {
+  display: flex;
+  gap: 10px;
+  font-size: 12px;
+  color: #999;
+  flex-wrap: wrap;
+}
+
+.vk-messages-footer {
+  text-align: center;
+  margin-top: 20px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.vk-messages-footer p {
+  margin: 5px 0;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.connection-status {
+  font-weight: 500;
+}
+
+@media (max-width: 768px) {
+  .vk-messages {
+    padding: 20px 15px;
+  }
+
+  .vk-messages-header {
+    flex-direction: column;
+    align-items: stretch;
+    text-align: center;
+  }
+
+  .vk-messages-controls {
+    justify-content: center;
+  }
+
+  .message-header {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+
+  .message-meta {
+    flex-direction: column;
+    gap: 5px;
+  }
+}

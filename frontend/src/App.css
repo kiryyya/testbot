@@ -47,6 +47,29 @@ body {
   line-height: 1.5;
 }
 
+.features-badges {
+  display: flex;
+  justify-content: center;
+  gap: 15px;
+  margin-top: 20px;
+  flex-wrap: wrap;
+}
+
+.badge {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 14px;
+  font-weight: 500;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.badge:hover {
+  transform: translateY(-2px);
+}
+
 .app-main {
   flex: 1;
   padding: 0 20px;

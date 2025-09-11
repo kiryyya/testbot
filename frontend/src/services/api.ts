@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { UserData, ApiResponse } from '../types';
+import { UserData, VkMessage, ApiResponse } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -38,6 +38,12 @@ export const apiService = {
   // Удалить запись
   deleteData: async (id: string): Promise<ApiResponse<UserData>> => {
     const response = await api.delete(`/data/${id}`);
+    return response.data;
+  },
+
+  // VK сообщения
+  getVkMessages: async (limit?: number): Promise<ApiResponse<VkMessage[]>> => {
+    const response = await api.get(`/vk/messages${limit ? `?limit=${limit}` : ''}`);
     return response.data;
   },
 };

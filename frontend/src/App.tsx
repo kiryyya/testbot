@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import UserForm from './components/UserForm';
 import DataList from './components/DataList';
+import VkMessages from './components/VkMessages';
 import { apiService } from './services/api';
 import { UserData } from './types';
 import './App.css';
@@ -110,8 +111,14 @@ function App() {
   return (
     <div className="App">
       <header className="app-header">
-        <h1>📝 Система управления данными</h1>
-        <p>Простое приложение для сохранения и управления пользовательскими данными</p>
+        <h1>🤖 TestBot - Marketing Project</h1>
+        <p>Система управления данными + интеграция с VK Callback API</p>
+        <div className="features-badges">
+          <span className="badge">📝 Формы</span>
+          <span className="badge">💬 VK API</span>
+          <span className="badge">🔄 Real-time</span>
+          <span className="badge">🗄️ PostgreSQL</span>
+        </div>
       </header>
 
       {/* Уведомления */}
@@ -139,6 +146,11 @@ function App() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* VK Сообщения */}
+        <section>
+          <VkMessages refreshInterval={10} />
         </section>
 
         {/* Список данных */}
