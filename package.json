@@ -1,0 +1,23 @@
+{
+  "name": "marketing-project",
+  "version": "1.0.0",
+  "description": "Проект с формой для сохранения данных в PostgreSQL",
+  "main": "index.js",
+  "scripts": {
+    "start": "node backend/server.js",
+    "dev": "nodemon backend/server.js",
+    "client": "cd frontend && npm start",
+    "server": "cd backend && npm run dev",
+    "install-all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev-all": "concurrently \"npm run server\" \"npm run client\""
+  },
+  "dependencies": {
+    "concurrently": "^7.6.0"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  },
+  "keywords": ["react", "nodejs", "postgresql", "forms"],
+  "author": "",
+  "license": "MIT"
+}
