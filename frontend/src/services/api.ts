@@ -46,6 +46,12 @@ export const apiService = {
     const response = await api.get(`/vk/messages${limit ? `?limit=${limit}` : ''}`);
     return response.data;
   },
+
+  // VK лайки
+  getVkLikes: async (): Promise<ApiResponse<any>> => {
+    const response = await api.get('/vk/likes');
+    return response.data;
+  },
 };
 
 export default api;

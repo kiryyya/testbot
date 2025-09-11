@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import UserForm from './components/UserForm';
 import DataList from './components/DataList';
 import VkMessages from './components/VkMessages';
+import VkLikesCounter from './components/VkLikesCounter';
 import { apiService } from './services/api';
 import { UserData } from './types';
 import './App.css';
@@ -115,7 +116,8 @@ function App() {
         <p>Система управления данными + интеграция с VK Callback API</p>
         <div className="features-badges">
           <span className="badge">📝 Формы</span>
-          <span className="badge">💬 VK API</span>
+          <span className="badge">💬 VK Сообщения</span>
+          <span className="badge">❤️ VK Лайки</span>
           <span className="badge">🔄 Real-time</span>
           <span className="badge">🗄️ PostgreSQL</span>
         </div>
@@ -146,6 +148,11 @@ function App() {
               </button>
             </div>
           )}
+        </section>
+
+        {/* VK Счетчик лайков */}
+        <section>
+          <VkLikesCounter refreshInterval={5} />
         </section>
 
         {/* VK Сообщения */}

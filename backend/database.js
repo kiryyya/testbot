@@ -42,12 +42,29 @@ const createTable = async () => {
         UNIQUE(vk_message_id)
       );
     `;
+
+    // Таблица для статистики лайков постов
+    const vkLikesQuery = `
+      CREATE TABLE IF NOT EXISTS vk_post_likes (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id INTEGER NOT NULL,
+        likes_count INTEGER DEFAULT 0,
+        last_liker_id INTEGER,
+        last_like_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id)
+      );
+    `;
     
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
     
     await pool.query(vkMessagesQuery);
     console.log('✅ Таблица vk_messages создана или уже существует');
+    
+    await pool.query(vkLikesQuery);
+    console.log('✅ Таблица vk_post_likes создана или уже существует');
   } catch (error) {
     console.error('❌ Ошибка при создании таблиц:', error);
   }

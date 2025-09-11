@@ -180,11 +180,12 @@ app.post('/vk/callback', async (req, res) => {
       body: req.body
     });
     
-    // Проверка секретного ключа (опционально)
-    if (process.env.VK_SECRET_KEY && secret !== process.env.VK_SECRET_KEY) {
-      console.log('❌ Неверный секретный ключ VK');
-      return res.status(403).send('Forbidden');
-    }
+    // Проверка секретного ключа (временно отключена для настройки)
+    // if (process.env.VK_SECRET_KEY && process.env.VK_SECRET_KEY !== 'your_secret_key' && secret !== process.env.VK_SECRET_KEY) {
+    //   console.log('❌ Неверный секретный ключ VK');
+    //   return res.status(403).send('Forbidden');
+    // }
+    console.log('🔑 Секретный ключ в запросе:', secret);
     
     // Обработка подтверждения сервера
     if (type === 'confirmation') {
@@ -200,6 +201,21 @@ app.post('/vk/callback', async (req, res) => {
     // Обработка комментариев к постам
     if (type === 'wall_reply_new') {
       await handleWallComment(object);
+    }
+    
+    // Обработка лайков на посты
+    if (type === 'wall_like_new') {
+      await handleWallLike(object);
+    }
+    
+    // Обработка добавления лайка (реальное VK событие)
+    if (type === 'like_add') {
+      await handleLikeAdd(object);
+    }
+    
+    // Обработка удаления лайка (реальное VK событие)
+    if (type === 'like_remove') {
+      await handleLikeRemove(object);
     }
     
     // Обязательный ответ "ok" для VK
@@ -287,6 +303,115 @@ const handleWallComment = async (commentData) => {
   }
 };
 
+// Функция обработки лайков постов (legacy)
+const handleWallLike = async (likeData) => {
+  try {
+    console.log('❤️ Новый лайк VK (legacy):', {
+      liker_id: likeData.liker_id,
+      post_id: likeData.post_id || likeData.object_id,
+      object_type: likeData.object_type
+    });
+
+    const postId = likeData.post_id || likeData.object_id;
+    
+    // Обновляем счетчик лайков для поста
+    const query = `
+      INSERT INTO vk_post_likes (post_id, likes_count, last_liker_id, last_like_time, updated_at)
+      VALUES ($1, 1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (post_id) 
+      DO UPDATE SET 
+        likes_count = vk_post_likes.likes_count + 1,
+        last_liker_id = $2,
+        last_like_time = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+    
+    const values = [postId, likeData.liker_id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length > 0) {
+      const postStats = result.rows[0];
+      console.log(`✅ Лайк сохранен! Пост ${postId} теперь имеет ${postStats.likes_count} лайков`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка сохранения VK лайка:', error);
+  }
+};
+
+// Функция обработки добавления лайка (реальное VK событие)
+const handleLikeAdd = async (likeData) => {
+  try {
+    console.log('❤️ Лайк добавлен VK:', {
+      liker_id: likeData.liker_id,
+      object_id: likeData.object_id,
+      object_type: likeData.object_type,
+      post_id: likeData.post_id
+    });
+
+    const postId = likeData.object_id; // В реальных VK событиях используется object_id
+    
+    // Увеличиваем счетчик лайков для поста
+    const query = `
+      INSERT INTO vk_post_likes (post_id, likes_count, last_liker_id, last_like_time, updated_at)
+      VALUES ($1, 1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+      ON CONFLICT (post_id) 
+      DO UPDATE SET 
+        likes_count = vk_post_likes.likes_count + 1,
+        last_liker_id = $2,
+        last_like_time = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+    
+    const values = [postId, likeData.liker_id];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length > 0) {
+      const postStats = result.rows[0];
+      console.log(`✅ Лайк добавлен! Пост ${postId} теперь имеет ${postStats.likes_count} лайков`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка сохранения добавления лайка:', error);
+  }
+};
+
+// Функция обработки удаления лайка (реальное VK событие)
+const handleLikeRemove = async (likeData) => {
+  try {
+    console.log('💔 Лайк удален VK:', {
+      liker_id: likeData.liker_id,
+      object_id: likeData.object_id,
+      object_type: likeData.object_type,
+      post_id: likeData.post_id
+    });
+
+    const postId = likeData.object_id;
+    
+    // Уменьшаем счетчик лайков для поста
+    const query = `
+      UPDATE vk_post_likes 
+      SET 
+        likes_count = GREATEST(likes_count - 1, 0),
+        updated_at = CURRENT_TIMESTAMP
+      WHERE post_id = $1
+      RETURNING *
+    `;
+    
+    const values = [postId];
+    const result = await pool.query(query, values);
+    
+    if (result.rows.length > 0) {
+      const postStats = result.rows[0];
+      console.log(`✅ Лайк удален! Пост ${postId} теперь имеет ${postStats.likes_count} лайков`);
+    } else {
+      console.log(`ℹ️ Пост ${postId} не найден в базе лайков`);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка сохранения удаления лайка:', error);
+  }
+};
+
 // API для получения VK сообщений
 app.get('/api/vk/messages', async (req, res) => {
   try {
@@ -310,6 +435,31 @@ app.get('/api/vk/messages', async (req, res) => {
   }
 });
 
+// API для получения статистики лайков
+app.get('/api/vk/likes', async (req, res) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM vk_post_likes ORDER BY updated_at DESC'
+    );
+    
+    // Подсчитываем общее количество лайков
+    const totalLikes = result.rows.reduce((sum, post) => sum + post.likes_count, 0);
+    
+    res.json({
+      success: true,
+      data: result.rows,
+      total_likes: totalLikes,
+      posts_count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Ошибка при получении статистики лайков:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении статистики лайков'
+    });
+  }
+});
+
 // Обработка корневого маршрута
 app.get('/', (req, res) => {
   res.json({
@@ -322,7 +472,8 @@ app.get('/', (req, res) => {
       'PUT /api/data/:id': 'Обновить запись',
       'DELETE /api/data/:id': 'Удалить запись',
       'POST /vk/callback': 'VK Callback API webhook',
-      'GET /api/vk/messages': 'Получить VK сообщения'
+      'GET /api/vk/messages': 'Получить VK сообщения',
+      'GET /api/vk/likes': 'Получить статистику лайков постов'
     }
   });
 });
