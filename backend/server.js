@@ -2,6 +2,7 @@ const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
+const axios = require('axios');
 require('dotenv').config({ path: './config.env' });
 
 const { pool, createTable, testConnection } = require('./database');
@@ -297,9 +298,86 @@ const handleWallComment = async (commentData) => {
     const result = await pool.query(query, values);
     if (result.rows.length > 0) {
       console.log('✅ Комментарий VK сохранен в БД');
+      
+      // Автоматически отвечаем на комментарий
+      await replyToComment(commentData);
     }
   } catch (error) {
     console.error('❌ Ошибка сохранения VK комментария:', error);
+  }
+};
+
+// Функция для ответа на комментарий
+const replyToComment = async (commentData) => {
+  try {
+    const accessToken = process.env.VK_ACCESS_TOKEN;
+    const groupId = process.env.VK_GROUP_ID;
+    
+    if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
+      console.log('⚠️ VK Access Token не настроен');
+      return;
+    }
+    
+    if (!groupId || groupId === 'your_group_id') {
+      console.log('⚠️ VK Group ID не настроен');
+      return;
+    }
+    
+    // Формируем текст ответа с добавлением "удачно"
+    const originalText = commentData.text || '';
+    const replyText = `${originalText} удачно`;
+    
+    const vkApiUrl = 'https://api.vk.com/method/wall.createComment';
+    const params = {
+      access_token: accessToken,
+      v: '5.199',
+      owner_id: `-${groupId}`, // Отрицательный ID для групп
+      post_id: commentData.post_id,
+      reply_to_comment: commentData.id,
+      message: replyText
+    };
+    
+    console.log('📤 Отправляем ответ на комментарий:', {
+      post_id: commentData.post_id,
+      reply_to: commentData.id,
+      message: replyText
+    });
+    
+    const response = await axios.post(vkApiUrl, null, { params });
+    
+    if (response.data.response) {
+      console.log('✅ Ответ на комментарий отправлен успешно');
+      
+      // Сохраняем наш ответ в БД
+      const replyQuery = `
+        INSERT INTO vk_messages (
+          vk_message_id, vk_user_id, user_name, message_text, 
+          message_type, timestamp
+        )
+        VALUES ($1, $2, $3, $4, $5, $6)
+        ON CONFLICT (vk_message_id) DO NOTHING
+      `;
+      
+      const replyValues = [
+        response.data.response.comment_id,
+        -parseInt(groupId), // Отрицательный ID для группы
+        'Наша группа',
+        replyText,
+        'our_reply',
+        Math.floor(Date.now() / 1000)
+      ];
+      
+      await pool.query(replyQuery, replyValues);
+      console.log('✅ Наш ответ сохранен в БД');
+      
+    } else {
+      console.error('❌ Ошибка API VK при отправке ответа:', response.data);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при отправке ответа на комментарий:', error.message);
+    if (error.response) {
+      console.error('❌ Детали ошибки VK API:', error.response.data);
+    }
   }
 };
 
@@ -456,6 +534,39 @@ app.get('/api/vk/likes', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении статистики лайков'
+    });
+  }
+});
+
+// API для тестирования автоответов на комментарии
+app.post('/api/test/comment', async (req, res) => {
+  try {
+    const { text, post_id, from_id } = req.body;
+    
+    // Создаем тестовый комментарий
+    const testComment = {
+      id: Math.floor(Math.random() * 1000000),
+      text: text || 'Тестовый комментарий',
+      post_id: post_id || 123,
+      from_id: from_id || 123456789,
+      date: Math.floor(Date.now() / 1000)
+    };
+    
+    console.log('🧪 Тестируем обработку комментария:', testComment);
+    
+    // Обрабатываем комментарий
+    await handleWallComment(testComment);
+    
+    res.json({
+      success: true,
+      message: 'Тестовый комментарий обработан',
+      comment: testComment
+    });
+  } catch (error) {
+    console.error('Ошибка тестирования комментария:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при тестировании комментария'
     });
   }
 });
