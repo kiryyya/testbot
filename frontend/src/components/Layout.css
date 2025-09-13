@@ -1,0 +1,45 @@
+/* Layout Styles */
+.layout {
+  display: flex;
+  min-height: 100vh;
+  background: #f8f9fa;
+}
+
+.layout-main {
+  flex: 1;
+  transition: margin-left 0.3s ease;
+  min-height: 100vh;
+  position: relative;
+}
+
+.layout-main-shifted {
+  margin-left: 280px;
+}
+
+.layout-main-full {
+  margin-left: 70px;
+}
+
+.layout-content {
+  width: 100%;
+  min-height: 100vh;
+  padding: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .layout-main-shifted,
+  .layout-main-full {
+    margin-left: 0;
+  }
+}
+
+/* Smooth transitions */
+* {
+  box-sizing: border-box;
+}
+
+/* Обеспечиваем правильное отображение контента */
+.layout-content > * {
+  width: 100%;
+}
