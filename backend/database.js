@@ -56,6 +56,28 @@ const createTable = async () => {
         UNIQUE(post_id)
       );
     `;
+
+    // Таблица для настроек администратора
+    const adminSettingsQuery = `
+      CREATE TABLE IF NOT EXISTS admin_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        setting_key VARCHAR(255) UNIQUE NOT NULL,
+        setting_value TEXT NOT NULL,
+        setting_type VARCHAR(50) DEFAULT 'string',
+        description TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    // Добавляем дефолтные настройки автоответов
+    const defaultSettingsQuery = `
+      INSERT INTO admin_settings (setting_key, setting_value, setting_type, description)
+      VALUES 
+        ('auto_reply_enabled', 'true', 'boolean', 'Включены ли автоответы на комментарии'),
+        ('auto_reply_text', 'удачно', 'string', 'Текст для автоответов на комментарии')
+      ON CONFLICT (setting_key) DO NOTHING;
+    `;
     
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
@@ -65,6 +87,12 @@ const createTable = async () => {
     
     await pool.query(vkLikesQuery);
     console.log('✅ Таблица vk_post_likes создана или уже существует');
+
+    await pool.query(adminSettingsQuery);
+    console.log('✅ Таблица admin_settings создана или уже существует');
+
+    await pool.query(defaultSettingsQuery);
+    console.log('✅ Дефолтные настройки добавлены');
   } catch (error) {
     console.error('❌ Ошибка при создании таблиц:', error);
   }

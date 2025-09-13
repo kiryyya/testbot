@@ -310,8 +310,29 @@ const handleWallComment = async (commentData) => {
 // Функция для ответа на комментарий
 const replyToComment = async (commentData) => {
   try {
+    // Проверяем, включены ли автоответы
+    const autoReplyEnabled = await getSetting('auto_reply_enabled');
+    
+    console.log('🔍 Проверка настроек автоответов:', {
+      autoReplyEnabled,
+      type: typeof autoReplyEnabled,
+      isEnabled: autoReplyEnabled === true
+    });
+    
+    if (autoReplyEnabled !== true) {
+      console.log('🔇 Автоответы отключены, пропускаем ответ на комментарий. Значение:', autoReplyEnabled);
+      return;
+    }
+    
     const accessToken = process.env.VK_ACCESS_TOKEN;
     const groupId = process.env.VK_GROUP_ID;
+    
+    console.log('🔑 Проверка VK токенов:', {
+      hasAccessToken: !!accessToken,
+      accessTokenLength: accessToken ? accessToken.length : 0,
+      hasGroupId: !!groupId,
+      groupId: groupId
+    });
     
     if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
       console.log('⚠️ VK Access Token не настроен');
@@ -323,9 +344,12 @@ const replyToComment = async (commentData) => {
       return;
     }
     
-    // Формируем текст ответа с добавлением "удачно"
+    // Получаем текст автоответа из настроек
+    const autoReplyText = await getSetting('auto_reply_text') || 'удачно';
+    
+    // Формируем текст ответа
     const originalText = commentData.text || '';
-    const replyText = `${originalText} удачно`;
+    const replyText = `${originalText} ${autoReplyText}`;
     
     const vkApiUrl = 'https://api.vk.com/method/wall.createComment';
     const params = {
@@ -340,7 +364,9 @@ const replyToComment = async (commentData) => {
     console.log('📤 Отправляем ответ на комментарий:', {
       post_id: commentData.post_id,
       reply_to: commentData.id,
-      message: replyText
+      message: replyText,
+      auto_reply_enabled: autoReplyEnabled,
+      auto_reply_text: autoReplyText
     });
     
     const response = await axios.post(vkApiUrl, null, { params });
@@ -571,6 +597,130 @@ app.post('/api/test/comment', async (req, res) => {
   }
 });
 
+// API для управления настройками администратора
+
+// Получить настройки
+app.get('/api/admin/settings', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT setting_key, setting_value, setting_type FROM admin_settings');
+    
+    // Преобразуем результат в удобный формат
+    const settings = {};
+    result.rows.forEach(row => {
+      let value = row.setting_value;
+      
+      // Конвертируем значения в правильный тип
+      if (row.setting_type === 'boolean') {
+        value = value === 'true';
+      } else if (row.setting_type === 'number') {
+        value = parseFloat(value);
+      }
+      
+      // Конвертируем ключи в camelCase для фронтенда
+      const key = row.setting_key.replace(/_([a-z])/g, (g) => g[1].toUpperCase());
+      settings[key] = value;
+    });
+    
+    res.json({
+      success: true,
+      settings: settings
+    });
+  } catch (error) {
+    console.error('Ошибка при получении настроек:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении настроек'
+    });
+  }
+});
+
+// Сохранить настройки
+app.post('/api/admin/settings', async (req, res) => {
+  try {
+    const { autoReplyEnabled, autoReplyText } = req.body;
+    
+    // Валидация
+    if (typeof autoReplyEnabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'autoReplyEnabled должно быть boolean'
+      });
+    }
+    
+    if (typeof autoReplyText !== 'string' || autoReplyText.trim().length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'autoReplyText должно быть непустой строкой'
+      });
+    }
+    
+    // Обновляем настройки в базе данных
+    const updateEnabledQuery = `
+      UPDATE admin_settings 
+      SET setting_value = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE setting_key = 'auto_reply_enabled'
+    `;
+    
+    const updateTextQuery = `
+      UPDATE admin_settings 
+      SET setting_value = $1, updated_at = CURRENT_TIMESTAMP 
+      WHERE setting_key = 'auto_reply_text'
+    `;
+    
+    await pool.query(updateEnabledQuery, [autoReplyEnabled.toString()]);
+    await pool.query(updateTextQuery, [autoReplyText.trim()]);
+    
+    console.log('⚙️ Настройки автоответов обновлены:', {
+      autoReplyEnabled,
+      autoReplyText: autoReplyText.trim()
+    });
+    
+    res.json({
+      success: true,
+      message: 'Настройки успешно сохранены',
+      settings: {
+        autoReplyEnabled,
+        autoReplyText: autoReplyText.trim()
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при сохранении настроек:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при сохранении настроек'
+    });
+  }
+});
+
+// Функция для получения настройки из базы данных
+const getSetting = async (key) => {
+  try {
+    const result = await pool.query(
+      'SELECT setting_value, setting_type FROM admin_settings WHERE setting_key = $1',
+      [key]
+    );
+    
+    if (result.rows.length === 0) {
+      return null;
+    }
+    
+    let value = result.rows[0].setting_value;
+    const type = result.rows[0].setting_type;
+    
+    // Конвертируем значение в правильный тип
+    if (type === 'boolean') {
+      value = value === 'true';
+    } else if (type === 'number') {
+      value = parseFloat(value);
+    }
+    
+    return value;
+  } catch (error) {
+    console.error(`Ошибка получения настройки ${key}:`, error);
+    return null;
+  }
+};
+
 // Обработка корневого маршрута
 app.get('/', (req, res) => {
   res.json({
@@ -584,7 +734,10 @@ app.get('/', (req, res) => {
       'DELETE /api/data/:id': 'Удалить запись',
       'POST /vk/callback': 'VK Callback API webhook',
       'GET /api/vk/messages': 'Получить VK сообщения',
-      'GET /api/vk/likes': 'Получить статистику лайков постов'
+      'GET /api/vk/likes': 'Получить статистику лайков постов',
+      'GET /api/admin/settings': 'Получить настройки администратора',
+      'POST /api/admin/settings': 'Сохранить настройки администратора',
+      'POST /api/test/comment': 'Тестировать обработку комментария'
     }
   });
 });
