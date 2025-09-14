@@ -5,7 +5,18 @@ const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 require('dotenv').config({ path: './config.env' });
 
-const { pool, createTable, testConnection } = require('./database');
+const { 
+  pool, 
+  createTable, 
+  testConnection,
+  findOrCreateVkPlayer,
+  createVkEvent,
+  updatePlayerStats,
+  getTopPlayers,
+  getPlayerEvents,
+  calculateRandomDamage,
+  checkVictoryConditions
+} = require('./database');
 
 const app = express();
 const PORT = process.env.PORT || 5001;
@@ -201,6 +212,7 @@ app.post('/vk/callback', async (req, res) => {
     
     // Обработка комментариев к постам
     if (type === 'wall_reply_new') {
+      console.log('🔄 Получен wall_reply_new, обрабатываем комментарий...');
       await handleWallComment(object);
     }
     
@@ -270,46 +282,112 @@ const handleNewMessage = async (message) => {
 // Функция обработки комментариев к постам
 const handleWallComment = async (commentData) => {
   try {
-    console.log('💭 Новый комментарий VK:', {
+    console.log('💭 Обработка комментария VK:', {
+      comment_id: commentData.id,
       from: commentData.from_id,
       text: commentData.text,
-      post_id: commentData.post_id
+      post_id: commentData.post_id,
+      timestamp: commentData.date
     });
     
-    const query = `
-      INSERT INTO vk_messages (
-        vk_message_id, vk_user_id, user_name, message_text, 
-        message_type, timestamp
-      )
-      VALUES ($1, $2, $3, $4, $5, $6)
-      ON CONFLICT (vk_message_id) DO NOTHING
-      RETURNING *
-    `;
-    
-    const values = [
-      commentData.id,
-      commentData.from_id,
-      'VK User ' + commentData.from_id,
-      commentData.text || '',
-      'wall_comment',
-      commentData.date
-    ];
-    
-    const result = await pool.query(query, values);
-    if (result.rows.length > 0) {
-      console.log('✅ Комментарий VK сохранен в БД');
-      
-      // Автоматически отвечаем на комментарий
-      await replyToComment(commentData);
+    // Проверяем, не наш ли это бот (не отвечаем на собственные комментарии)
+    const groupId = process.env.VK_GROUP_ID;
+    if (groupId && commentData.from_id === -parseInt(groupId)) {
+      console.log('🤖 Пропускаем собственный комментарий бота');
+      return;
     }
+    
+    // 1. Найти или создать игрока
+    const player = await findOrCreateVkPlayer(
+      commentData.from_id,
+      `VK User ${commentData.from_id}`,
+      null
+    );
+    
+    console.log('🎮 Текущий игрок:', {
+      id: player.id,
+      vk_user_id: player.vk_user_id,
+      attempts_left: player.attempts_left,
+      lives_count: player.lives_count,
+      total_score: player.total_score
+    });
+    
+    // 2. Проверяем, есть ли у игрока попытки
+    if (player.attempts_left <= 0) {
+      console.log('🚫 У игрока закончились попытки, отправляем уведомление');
+      
+      // Отправляем сообщение о том, что попытки закончились
+      await replyToComment(commentData, player, false, 0, true); // true = attempts_finished
+      return;
+    }
+    
+    // 3. Рассчитать случайный урон жизней
+    const livesToLose = calculateRandomDamage();
+    console.log(`🎲 Рассчитан урон: ${livesToLose} жизней`);
+    
+    // 4. Создать событие комментария (с защитой от дублей)
+    const eventData = {
+      vkMessageId: commentData.id,
+      vkUserId: commentData.from_id,
+      playerId: player.id,
+      postId: commentData.post_id,
+      eventType: 'wall_comment',
+      messageText: commentData.text || '',
+      scoreEarned: 1, // Базовый счет за комментарий
+      attemptsUsed: 1, // Использована одна попытка
+      livesUsed: livesToLose, // Случайный урон жизней
+      timestamp: commentData.date
+    };
+    
+    const event = await createVkEvent(eventData);
+    
+    if (event) {
+      console.log('📝 Новое событие создано:', event.id);
+      
+      // 5. Обновить статистику игрока
+      const updatedPlayer = await updatePlayerStats(
+        player.id,
+        1, // попытки использованы
+        livesToLose, // жизни использованы (случайный урон)
+        1  // очки заработаны
+      );
+      
+      if (updatedPlayer) {
+        console.log('📊 Статистика обновлена:', {
+          attempts_left: updatedPlayer.attempts_left,
+          lives_count: updatedPlayer.lives_count,
+          total_score: updatedPlayer.total_score,
+          lives_lost_this_turn: livesToLose
+        });
+        
+        // 6. Проверить условия победы
+        const isVictory = checkVictoryConditions(updatedPlayer);
+        
+        // 7. Автоматически отвечаем на комментарий
+        await replyToComment(commentData, updatedPlayer, isVictory, livesToLose, false); // false = attempts_finished
+      }
+    } else {
+      console.log('⚠️ Событие уже существует, пропускаем обработку (защита от дублей)');
+      // Не обрабатываем дубликаты - не отвечаем повторно
+      return;
+    }
+    
   } catch (error) {
-    console.error('❌ Ошибка сохранения VK комментария:', error);
+    console.error('❌ Ошибка обработки VK комментария:', error);
   }
 };
 
 // Функция для ответа на комментарий
-const replyToComment = async (commentData) => {
+const replyToComment = async (commentData, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
   try {
+    console.log('📤 Начинаем отправку ответа на комментарий:', {
+      comment_id: commentData.id,
+      user_id: commentData.from_id,
+      is_victory: isVictory,
+      lives_lost: livesLost,
+      attempts_finished: attemptsFinished
+    });
+    
     // Проверяем, включены ли автоответы
     const autoReplyEnabled = await getSetting('auto_reply_enabled');
     
@@ -347,9 +425,58 @@ const replyToComment = async (commentData) => {
     // Получаем текст автоответа из настроек
     const autoReplyText = await getSetting('auto_reply_text') || 'удачно';
     
-    // Формируем текст ответа
+    // Формируем текст ответа с игровой статистикой
     const originalText = commentData.text || '';
-    const replyText = `${originalText} ${autoReplyText}`;
+    let replyText;
+    
+    // Проверяем тип сообщения
+    if (isVictory) {
+      // Сообщение о победе
+      replyText = `${originalText} ${autoReplyText}\n\n🎉🏆 ВЫ ПОБЕДИЛИ! 🏆🎉\n\nВы прошли все 5 попыток и потратили все жизни! Поздравляем с победой! 🎊`;
+      
+      if (playerData) {
+        replyText += `\n\n📊 Финальная статистика:\n⭐ Итоговые очки: ${playerData.total_score}\n💀 Последний урон: -${livesLost} жизней`;
+      }
+    } else if (attemptsFinished) {
+      // Сообщение о закончившихся попытках
+      replyText = `${originalText} ${autoReplyText}\n\n🚫 ПОПЫТКИ ЗАКОНЧИЛИСЬ! 🚫\n\nУ вас больше нет попыток для игры.`;
+      
+      if (playerData) {
+        replyText += `\n\n📊 Ваша статистика:\n🎮 Попытки: ${playerData.attempts_left} | 💜 Жизни: ${playerData.lives_count} | ⭐ Очки: ${playerData.total_score}`;
+        
+        if (playerData.lives_count > 0) {
+          replyText += `\n\n💡 Жизни еще остались, но попытки кончились. Игра завершена.`;
+        }
+      }
+    } else {
+      // Обычный ответ с игровой статистикой
+      replyText = `${originalText} ${autoReplyText}`;
+      
+      if (playerData) {
+        const gameStats = `\n🎮 Попытки: ${playerData.attempts_left} | 💜 Жизни: ${playerData.lives_count} | ⭐ Очки: ${playerData.total_score}`;
+        replyText += gameStats;
+        
+        // Показываем урон этого хода
+        if (livesLost > 0) {
+          replyText += `\n💥 Урон: -${livesLost} жизней`;
+        }
+        
+        // Дополнительные сообщения в зависимости от статуса
+        if (playerData.attempts_left <= 1) {
+          replyText += '\n⚠️ Осталась последняя попытка!';
+        } else if (playerData.attempts_left <= 2) {
+          replyText += '\n🔥 Попыток мало, будь осторожнее!';
+        }
+        
+        if (playerData.lives_count <= 20) {
+          replyText += '\n💔 Жизней мало!';
+        }
+        
+        if (playerData.lives_count <= 0) {
+          replyText += '\n💀 Жизни закончились!';
+        }
+      }
+    }
     
     const vkApiUrl = 'https://api.vk.com/method/wall.createComment';
     const params = {
@@ -520,10 +647,28 @@ const handleLikeRemove = async (likeData) => {
 app.get('/api/vk/messages', async (req, res) => {
   try {
     const limit = parseInt(req.query.limit) || 20;
-    const result = await pool.query(
-      'SELECT * FROM vk_messages ORDER BY created_at DESC LIMIT $1',
-      [limit]
-    );
+    
+    // Получаем события из новой таблицы с информацией об игроках
+    const query = `
+      SELECT 
+        e.id,
+        e.vk_message_id,
+        e.vk_user_id,
+        p.user_name,
+        e.message_text,
+        e.event_type as message_type,
+        e.score_earned,
+        e.attempts_used,
+        e.lives_used,
+        e.timestamp,
+        e.created_at
+      FROM vk_events e
+      JOIN vk_players p ON e.player_id = p.id
+      ORDER BY e.created_at DESC
+      LIMIT $1
+    `;
+    
+    const result = await pool.query(query, [limit]);
     
     res.json({
       success: true,
@@ -534,7 +679,8 @@ app.get('/api/vk/messages', async (req, res) => {
     console.error('Ошибка при получении VK сообщений:', error);
     res.status(500).json({
       success: false,
-      message: 'Ошибка при получении VK сообщений'
+      message: 'Ошибка при загрузке сообщений',
+      error: error.message
     });
   }
 });
@@ -593,6 +739,204 @@ app.post('/api/test/comment', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при тестировании комментария'
+    });
+  }
+});
+
+// API для игровой системы
+
+// Получить топ игроков
+app.get('/api/players/top', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 10;
+    const topPlayers = await getTopPlayers(limit);
+    
+    res.json({
+      success: true,
+      data: topPlayers,
+      count: topPlayers.length
+    });
+  } catch (error) {
+    console.error('Ошибка получения топа игроков:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении топа игроков'
+    });
+  }
+});
+
+// Получить данные конкретного игрока
+app.get('/api/players/:vkUserId', async (req, res) => {
+  try {
+    const vkUserId = parseInt(req.params.vkUserId);
+    
+    const playerQuery = `
+      SELECT * FROM vk_players 
+      WHERE vk_user_id = $1
+    `;
+    const playerResult = await pool.query(playerQuery, [vkUserId]);
+    
+    if (playerResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Игрок не найден'
+      });
+    }
+    
+    const player = playerResult.rows[0];
+    const events = await getPlayerEvents(player.id, 20);
+    
+    res.json({
+      success: true,
+      data: {
+        player,
+        events
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка получения данных игрока:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении данных игрока'
+    });
+  }
+});
+
+// Получить все события
+app.get('/api/events', async (req, res) => {
+  try {
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    
+    const query = `
+      SELECT 
+        e.*,
+        p.user_name,
+        p.vk_user_id
+      FROM vk_events e
+      JOIN vk_players p ON e.player_id = p.id
+      ORDER BY e.timestamp DESC
+      LIMIT $1 OFFSET $2
+    `;
+    
+    const result = await pool.query(query, [limit, offset]);
+    
+    res.json({
+      success: true,
+      data: result.rows,
+      count: result.rows.length
+    });
+  } catch (error) {
+    console.error('Ошибка получения событий:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении событий'
+    });
+  }
+});
+
+// Получить статистику игровой системы
+app.get('/api/game/stats', async (req, res) => {
+  try {
+    const statsQuery = `
+      SELECT 
+        COUNT(*) as total_players,
+        SUM(total_score) as total_score,
+        AVG(total_score) as avg_score,
+        MAX(total_score) as max_score,
+        SUM(attempts_left) as total_attempts_left,
+        SUM(lives_count) as total_lives
+      FROM vk_players
+      WHERE is_active = true
+    `;
+    
+    const eventsStatsQuery = `
+      SELECT 
+        COUNT(*) as total_events,
+        SUM(score_earned) as total_score_earned,
+        SUM(attempts_used) as total_attempts_used,
+        SUM(lives_used) as total_lives_used
+      FROM vk_events
+    `;
+    
+    const [statsResult, eventsStatsResult] = await Promise.all([
+      pool.query(statsQuery),
+      pool.query(eventsStatsQuery)
+    ]);
+    
+    res.json({
+      success: true,
+      data: {
+        players: statsResult.rows[0],
+        events: eventsStatsResult.rows[0]
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка получения статистики:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении статистики'
+    });
+  }
+});
+
+// Сбросить игрока (для тестирования)
+app.post('/api/players/:vkUserId/reset', async (req, res) => {
+  try {
+    const vkUserId = parseInt(req.params.vkUserId);
+    
+    const resetQuery = `
+      UPDATE vk_players 
+      SET 
+        attempts_left = 5,
+        lives_count = 100,
+        total_score = 0,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE vk_user_id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(resetQuery, [vkUserId]);
+    
+    if (result.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Игрок не найден'
+      });
+    }
+    
+    res.json({
+      success: true,
+      message: 'Игрок сброшен к начальным значениям',
+      data: result.rows[0]
+    });
+  } catch (error) {
+    console.error('Ошибка сброса игрока:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при сбросе игрока'
+    });
+  }
+});
+
+// Тестирование игровой системы
+app.post('/api/game/test', async (req, res) => {
+  try {
+    const { testGameSystem } = require('./test-game-system');
+    
+    console.log('🧪 Запуск тестирования игровой системы...');
+    await testGameSystem();
+    
+    res.json({
+      success: true,
+      message: 'Тестирование игровой системы завершено успешно. Проверьте логи сервера.'
+    });
+  } catch (error) {
+    console.error('Ошибка тестирования:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при тестировании игровой системы',
+      error: error.message
     });
   }
 });
