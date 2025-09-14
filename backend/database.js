@@ -311,14 +311,10 @@ const getPlayerEvents = async (playerId, limit = 50) => {
   }
 };
 
-// Функция для расчета случайного урона жизней
-const calculateRandomDamage = () => {
-  // Случайный урон от 1 до 25 жизней
-  const minDamage = 1;
-  const maxDamage = 25;
-  const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
-  
-  console.log(`🎲 Случайный урон рассчитан: ${damage} жизней`);
+// Функция для расчета урона жизней (фиксированный урон 20 жизней за попытку)
+const calculateDamage = () => {
+  const damage = 20; // Фиксированный урон 20 жизней за попытку
+  console.log(`🎯 Урон за попытку: ${damage} жизней`);
   return damage;
 };
 
@@ -348,6 +344,6 @@ module.exports = {
   updatePlayerStats,
   getTopPlayers,
   getPlayerEvents,
-  calculateRandomDamage,
+  calculateDamage,
   checkVictoryConditions
 };

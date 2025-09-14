@@ -14,7 +14,7 @@ const {
   updatePlayerStats,
   getTopPlayers,
   getPlayerEvents,
-  calculateRandomDamage,
+  calculateDamage,
   checkVictoryConditions
 } = require('./database');
 
@@ -248,6 +248,13 @@ const handleNewMessage = async (message) => {
       date: message.date
     });
     
+    // Проверяем, является ли сообщение запросом приза
+    if (message.text && message.text.toLowerCase().trim() === 'приз') {
+      console.log('🎁 Получен запрос на приз от пользователя:', message.from_id);
+      await handlePrizeRequest(message.from_id);
+      return;
+    }
+    
     // Сохраняем сообщение в базу данных
     const query = `
       INSERT INTO vk_messages (
@@ -276,6 +283,86 @@ const handleNewMessage = async (message) => {
     }
   } catch (error) {
     console.error('❌ Ошибка сохранения VK сообщения:', error);
+  }
+};
+
+// Функция обработки запроса приза
+const handlePrizeRequest = async (vkUserId) => {
+  try {
+    console.log('🎁 Обрабатываем запрос приза для пользователя:', vkUserId);
+    
+    // Проверяем, есть ли игрок в базе и победил ли он
+    const playerQuery = `
+      SELECT * FROM vk_players 
+      WHERE vk_user_id = $1 AND attempts_left <= 0 AND lives_count <= 0
+    `;
+    
+    const playerResult = await pool.query(playerQuery, [vkUserId]);
+    
+    if (playerResult.rows.length === 0) {
+      console.log('❌ Пользователь не имеет права на приз:', vkUserId);
+      await sendMessage(vkUserId, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.');
+      return;
+    }
+    
+    const player = playerResult.rows[0];
+    console.log('✅ Пользователь имеет право на приз:', {
+      vk_user_id: player.vk_user_id,
+      total_score: player.total_score,
+      attempts_left: player.attempts_left,
+      lives_count: player.lives_count
+    });
+    
+    // Отправляем купон
+    await sendMessage(vkUserId, 'купон');
+    
+    console.log('🎉 Купон отправлен пользователю:', vkUserId);
+    
+  } catch (error) {
+    console.error('❌ Ошибка при обработке запроса приза:', error);
+  }
+};
+
+// Функция отправки сообщения пользователю
+const sendMessage = async (vkUserId, messageText) => {
+  try {
+    const accessToken = process.env.VK_ACCESS_TOKEN;
+    
+    if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
+      console.log('⚠️ VK Access Token не настроен для отправки сообщений');
+      return;
+    }
+    
+    // Генерируем случайный ID для сообщения
+    const randomId = Math.floor(Math.random() * 2147483647);
+    
+    const vkApiUrl = 'https://api.vk.com/method/messages.send';
+    const params = {
+      access_token: accessToken,
+      v: '5.199',
+      user_id: vkUserId,
+      random_id: randomId,
+      message: messageText
+    };
+    
+    console.log('📤 Отправляем сообщение VK:', {
+      user_id: vkUserId,
+      message: messageText,
+      random_id: randomId
+    });
+    
+    const response = await axios.post(vkApiUrl, null, { params });
+    
+    if (response.data.response) {
+      console.log('✅ Сообщение отправлено успешно:', response.data.response);
+    } else if (response.data.error) {
+      console.error('❌ Ошибка VK API при отправке сообщения:', response.data.error);
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при отправке сообщения:', error.message);
+    if (error.response) {
+      console.error('❌ Детали ошибки VK API:', error.response.data);
+    }
   }
 };
 
@@ -321,8 +408,8 @@ const handleWallComment = async (commentData) => {
       return;
     }
     
-    // 3. Рассчитать случайный урон жизней
-    const livesToLose = calculateRandomDamage();
+      // 3. Рассчитать урон жизней (фиксированный 20 жизней за попытку)
+      const livesToLose = calculateDamage();
     console.log(`🎲 Рассчитан урон: ${livesToLose} жизней`);
     
     // 4. Создать событие комментария (с защитой от дублей)
@@ -437,6 +524,8 @@ const replyToComment = async (commentData, playerData = null, isVictory = false,
       if (playerData) {
         replyText += `\n\n📊 Финальная статистика:\n⭐ Итоговые очки: ${playerData.total_score}\n💀 Последний урон: -${livesLost} жизней`;
       }
+      
+      replyText += `\n\n🎁 ДЛЯ ПОЛУЧЕНИЯ ПРИЗА:\nНапишите нам в личные сообщения слово "Приз" и получите свой купон!`;
     } else if (attemptsFinished) {
       // Сообщение о закончившихся попытках
       replyText = `${originalText} ${autoReplyText}\n\n🚫 ПОПЫТКИ ЗАКОНЧИЛИСЬ! 🚫\n\nУ вас больше нет попыток для игры.`;
@@ -936,6 +1025,29 @@ app.post('/api/game/test', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при тестировании игровой системы',
+      error: error.message
+    });
+  }
+});
+
+// Тестирование системы призов
+app.post('/api/prize/test', async (req, res) => {
+  try {
+    const { vk_user_id = 123456789 } = req.body;
+    
+    console.log('🎁 Тестируем систему призов для пользователя:', vk_user_id);
+    
+    await handlePrizeRequest(vk_user_id);
+    
+    res.json({
+      success: true,
+      message: `Тест системы призов завершен для пользователя ${vk_user_id}. Проверьте логи сервера.`
+    });
+  } catch (error) {
+    console.error('Ошибка тестирования системы призов:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при тестировании системы призов',
       error: error.message
     });
   }
