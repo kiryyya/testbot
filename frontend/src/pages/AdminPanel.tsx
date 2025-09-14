@@ -123,7 +123,7 @@ const AdminPanel: React.FC = () => {
           {/* Управление автоответами */}
           <div className="admin-card">
             <div className="card-header">
-              <h3 className="card-title">🤖 Автоответы VK</h3>
+              <h3 className="card-title">Автоответы VK</h3>
             </div>
             <div className="card-content">
               <div className="setting-item">
@@ -165,7 +165,7 @@ const AdminPanel: React.FC = () => {
                     disabled={loading || !settings.autoReplyEnabled}
                     className="save-btn"
                   >
-                    {loading ? '⏳' : '💾'} Сохранить
+                    {loading ? 'Загрузка...' : 'Сохранить'}
                   </button>
                 </div>
                 <p className="setting-description">
@@ -178,7 +178,7 @@ const AdminPanel: React.FC = () => {
           {/* Статистика */}
           <div className="admin-card">
             <div className="card-header">
-              <h3 className="card-title">📊 Статистика</h3>
+              <h3 className="card-title">Статистика</h3>
             </div>
             <div className="card-content">
               <div className="stat-item">
@@ -199,7 +199,7 @@ const AdminPanel: React.FC = () => {
           {/* Быстрые действия */}
           <div className="admin-card">
             <div className="card-header">
-              <h3 className="card-title">⚡ Быстрые действия</h3>
+              <h3 className="card-title">Быстрые действия</h3>
             </div>
             <div className="card-content">
               <button className="action-btn primary">
@@ -217,7 +217,7 @@ const AdminPanel: React.FC = () => {
           {/* Системная информация */}
           <div className="admin-card">
             <div className="card-header">
-              <h3 className="card-title">🖥️ Система</h3>
+              <h3 className="card-title">Система</h3>
             </div>
             <div className="card-content">
               <div className="system-info">
@@ -240,7 +240,7 @@ const AdminPanel: React.FC = () => {
           {/* Недавняя активность */}
           <div className="admin-card full-width">
             <div className="card-header">
-              <h3 className="card-title">📝 Недавняя активность</h3>
+              <h3 className="card-title">Недавняя активность</h3>
             </div>
             <div className="card-content">
               <div className="activity-list">

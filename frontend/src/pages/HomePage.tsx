@@ -112,14 +112,14 @@ const HomePage: React.FC = () => {
   return (
     <div className="home-page">
       <header className="home-header">
-        <h1>🤖 TestBot - Marketing Project</h1>
-        <p>Система управления данными + интеграция с VK Callback API</p>
+        <h1>TestBot - Marketing Project</h1>
+        <p>Система управления данными и интеграция с VK Callback API</p>
         <div className="features-badges">
-          <span className="badge">📝 Формы</span>
-          <span className="badge">💬 VK Сообщения</span>
-          <span className="badge">❤️ VK Лайки</span>
-          <span className="badge">🔄 Real-time</span>
-          <span className="badge">🗄️ PostgreSQL</span>
+          <span className="badge">FORMS</span>
+          <span className="badge">VK MESSAGES</span>
+          <span className="badge">VK LIKES</span>
+          <span className="badge">REAL-TIME</span>
+          <span className="badge">DATABASE</span>
         </div>
       </header>
 
@@ -172,7 +172,7 @@ const HomePage: React.FC = () => {
       </main>
 
       <footer className="home-footer">
-        <p>💻 Проект на React + Node.js + PostgreSQL</p>
+        <p>Проект на React + Node.js + PostgreSQL</p>
       </footer>
     </div>
   );

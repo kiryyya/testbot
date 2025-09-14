@@ -86,19 +86,19 @@ const VkLikesCounter: React.FC<VkLikesCounterProps> = ({ refreshInterval = 5 }) 
   return (
     <div className="vk-likes-counter">
       <div className="likes-header">
-        <h3>❤️ Счетчик лайков VK</h3>
+        <h3>Счетчик лайков VK</h3>
         <button 
           onClick={loadLikesStats} 
           disabled={loading}
           className="refresh-btn"
         >
-          🔄 {loading ? 'Загрузка...' : 'Обновить'}
+          {loading ? 'Загрузка...' : 'Обновить'}
         </button>
       </div>
 
       {error && (
         <div className="error-message">
-          ❌ {error}
+          Ошибка: {error}
         </div>
       )}
 
@@ -117,12 +117,12 @@ const VkLikesCounter: React.FC<VkLikesCounterProps> = ({ refreshInterval = 5 }) 
 
           {likesData.data.length > 0 && (
             <div className="posts-list">
-              <h4>📊 Лайки по постам:</h4>
+              <h4>Лайки по постам:</h4>
               {likesData.data.map((post) => (
                 <div key={post.id} className="post-item">
                   <div className="post-info">
                     <span className="post-id">Пост #{post.post_id}</span>
-                    <span className="likes-count">❤️ {post.likes_count}</span>
+                    <span className="likes-count">Лайков: {post.likes_count}</span>
                   </div>
                   <div className="post-meta">
                     <span>Последний лайк: {formatTime(post.last_like_time)}</span>
@@ -143,7 +143,7 @@ const VkLikesCounter: React.FC<VkLikesCounterProps> = ({ refreshInterval = 5 }) 
 
       {!likesData && !loading && !error && (
         <div className="no-data">
-          <p>📭 Нет данных о лайках</p>
+          <p>Нет данных о лайках</p>
           <p className="hint">Лайки появятся здесь автоматически при получении через VK Callback API</p>
         </div>
       )}

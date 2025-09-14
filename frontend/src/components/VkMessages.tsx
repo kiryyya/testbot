@@ -68,11 +68,11 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
   const getMessageIcon = (type: string) => {
     switch (type) {
       case 'message':
-        return '💬';
+        return 'MSG';
       case 'wall_comment':
-        return '💭';
+        return 'CMT';
       default:
-        return '📝';
+        return 'EVT';
     }
   };
 
@@ -91,7 +91,7 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
   return (
     <div className="vk-messages">
       <div className="vk-messages-header">
-        <h2>📱 VK Сообщения</h2>
+        <h2>VK Сообщения</h2>
         <div className="vk-messages-controls">
           <button 
             onClick={loadVkMessages} 
@@ -99,7 +99,7 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
             className="refresh-button"
             title="Обновить сообщения"
           >
-            🔄 {loading ? 'Загрузка...' : 'Обновить'}
+            {loading ? 'Загрузка...' : 'Обновить'}
           </button>
           {lastUpdate && (
             <span className="last-update">
@@ -111,13 +111,13 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
 
       {error && (
         <div className="error-message">
-          ❌ {error}
+          Ошибка: {error}
         </div>
       )}
 
       {messages.length === 0 && !loading && !error && (
         <div className="no-messages">
-          <p>📭 Нет сообщений от VK</p>
+          <p>Нет сообщений от VK</p>
           <p className="no-messages-hint">
             Сообщения появятся здесь автоматически при получении через VK Callback API
           </p>
@@ -147,7 +147,7 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
 
                 <div className="message-content">
                   <div className="message-author">
-                    👤 {message.user_name || `VK User ${message.vk_user_id}`}
+                    {message.user_name || `VK User ${message.vk_user_id}`}
                   </div>
                   
                   <div className="message-text">
@@ -168,9 +168,9 @@ const VkMessages: React.FC<VkMessagesProps> = ({ refreshInterval = 10 }) => {
       )}
 
       <div className="vk-messages-footer">
-        <p>🔗 Подключено к VK Callback API</p>
+        <p>Подключено к VK Callback API</p>
         <p className="connection-status">
-          {loading ? '🟡 Загрузка...' : '🟢 Готов к получению сообщений'}
+          {loading ? 'Загрузка...' : 'Готов к получению сообщений'}
         </p>
       </div>
     </div>

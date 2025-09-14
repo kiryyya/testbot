@@ -5,36 +5,38 @@ import './Sidebar.css';
 interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
+  onLogout: () => void;
+  user: {email: string; password: string} | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout, user }) => {
   const location = useLocation();
 
   const menuItems = [
     {
       path: '/',
       name: 'Главная',
-      icon: '🏠'
+      icon: 'HOME'
     },
     {
       path: '/admin',
       name: 'Админ панель',
-      icon: '⚙️'
+      icon: 'ADMIN'
     },
     {
       path: '/users',
       name: 'Пользователи',
-      icon: '👥'
+      icon: 'USERS'
     },
     {
       path: '/vk-messages',
       name: 'VK Сообщения',
-      icon: '💬'
+      icon: 'MESSAGES'
     },
     {
       path: '/analytics',
       name: 'Аналитика',
-      icon: '📊'
+      icon: 'ANALYTICS'
     }
   ];
 
@@ -54,7 +56,7 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
             onClick={toggleSidebar}
             aria-label="Переключить меню"
           >
-            {isOpen ? '◀' : '▶'}
+            {isOpen ? '←' : '→'}
           </button>
         </div>
 
@@ -80,8 +82,17 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar }) => {
         <div className="sidebar-footer">
           {isOpen && (
             <div className="sidebar-user">
-              <span className="sidebar-user-icon">👤</span>
-              <span className="sidebar-user-name">Администратор</span>
+              <div className="sidebar-user-info">
+                <span className="sidebar-user-icon">USER</span>
+                <span className="sidebar-user-name">{user?.email || 'Пользователь'}</span>
+              </div>
+              <button 
+                className="sidebar-logout-btn"
+                onClick={onLogout}
+                title="Выйти из системы"
+              >
+                Выйти
+              </button>
             </div>
           )}
         </div>
