@@ -1,22 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import './LoginPage.css';
+import VKAuth from '../components/VKAuth';
 
 interface LoginPageProps {
-  onLogin: (credentials: { email: string; password: string }) => void;
+  onVKLogin: (userData: any) => void;
 }
 
-const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-
-  const isFormValid = email.trim() !== '' && password.trim() !== '';
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (isFormValid) {
-      onLogin({ email: email.trim(), password: password.trim() });
-    }
-  };
+const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
 
   return (
     <div className="login-page">
@@ -53,45 +43,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
         </div>
 
         <div className="login-form-container">
-          <form className="login-form" onSubmit={handleSubmit}>
-            <h2>Вход в систему</h2>
-            
-            <div className="form-group">
-              <label htmlFor="email">Email</label>
-              <input
-                type="email"
-                id="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="Введите ваш email"
-                required
-              />
-            </div>
-            
-            <div className="form-group">
-              <label htmlFor="password">Пароль</label>
-              <input
-                type="password"
-                id="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="Введите пароль"
-                required
-              />
-            </div>
-            
-            <button 
-              type="submit" 
-              className={`login-button ${isFormValid ? 'active' : 'disabled'}`}
-              disabled={!isFormValid}
-            >
-              Войти в систему
-            </button>
-            
-            <p className="login-hint">
-              * Для демонстрации введите любые данные в оба поля
+          <div className="vk-auth-wrapper">
+            <h2>Авторизация через VK ID</h2>
+            <p className="auth-description">
+              Войдите в систему с помощью безопасной авторизации VK ID
             </p>
-          </form>
+            <VKAuth onAuthSuccess={onVKLogin} />
+          </div>
         </div>
       </div>
     </div>

@@ -1,14 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from './Sidebar';
+import AuthStatus from './AuthStatus';
 import './Layout.css';
 
 interface LayoutProps {
   onLogout: () => void;
-  user: {email: string; password: string} | null;
 }
 
-const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
+const Layout: React.FC<LayoutProps> = ({ onLogout }) => {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   // Закрываем сайдбар на мобильных устройствах по умолчанию
@@ -33,10 +33,11 @@ const Layout: React.FC<LayoutProps> = ({ onLogout, user }) => {
 
   return (
     <div className="layout">
-      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} onLogout={onLogout} user={user} />
+      <Sidebar isOpen={sidebarOpen} toggleSidebar={toggleSidebar} onLogout={onLogout} />
       
       <main className={`layout-main ${sidebarOpen ? 'layout-main-shifted' : 'layout-main-full'}`}>
         <div className="layout-content">
+          <AuthStatus />
           <Outlet />
         </div>
       </main>

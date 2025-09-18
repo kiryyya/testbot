@@ -1,0 +1,30 @@
+/* VK OneTap Component Styles */
+.vk-onetap-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.vk-onetap-widget {
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Стилизация VK OneTap виджета */
+.vk-onetap-widget :global(.VkIdOneTap) {
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
+}
+
+.vk-onetap-widget :global(.VkIdOneTap__button) {
+  border-radius: 8px !important;
+  font-weight: 500 !important;
+  transition: all 0.3s ease !important;
+}
+
+.vk-onetap-widget :global(.VkIdOneTap__button:hover) {
+  transform: translateY(-1px) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
+}

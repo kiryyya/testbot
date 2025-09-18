@@ -1,0 +1,538 @@
+/* VK Auth Component Styles */
+.auth-form {
+  padding: 40px 30px;
+  position: relative;
+}
+
+.close-modal-btn {
+  position: absolute;
+  top: 15px;
+  right: 15px;
+  background: none;
+  border: none;
+  font-size: 24px;
+  color: #666;
+  cursor: pointer;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition: all 0.3s ease;
+}
+
+.close-modal-btn:hover {
+  background: #f0f0f0;
+  color: #333;
+}
+
+.auth-container {
+  margin-bottom: 30px;
+}
+
+.vk-auth-container {
+  min-height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Loading States */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 20px;
+  color: #64748b;
+}
+
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #4f46e5;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
+}
+
+/* Error States */
+.error-container {
+  text-align: center;
+  padding: 20px;
+  border: 2px dashed #fecaca;
+  border-radius: 8px;
+  background: #fef2f2;
+}
+
+.error-message {
+  color: #dc2626;
+  margin-bottom: 15px;
+  font-weight: 500;
+}
+
+.retry-btn {
+  background: #4f46e5;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: background-color 0.3s ease;
+}
+
+.retry-btn:hover {
+  background: #3730a3;
+}
+
+/* Info Section */
+.info-section {
+  background: #f8fafc;
+  border-radius: 12px;
+  padding: 25px;
+  border-left: 4px solid #4f46e5;
+}
+
+.info-section h3 {
+  color: #1e293b;
+  font-size: 1.2rem;
+  margin-bottom: 15px;
+  font-weight: 600;
+}
+
+.info-section ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.info-section li {
+  color: #64748b;
+  margin-bottom: 8px;
+  padding-left: 20px;
+  position: relative;
+}
+
+.info-section li::before {
+  content: '✓';
+  position: absolute;
+  left: 0;
+  color: #10b981;
+  font-weight: bold;
+}
+
+/* User Info */
+.user-info {
+  padding: 30px;
+  text-align: center;
+}
+
+.user-info h3 {
+  color: #1e293b;
+  margin-bottom: 20px;
+  font-size: 1.3rem;
+}
+
+.user-details {
+  background: #f1f5f9;
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 20px;
+  text-align: left;
+}
+
+.user-card {
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.user-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  margin: 0 auto 15px;
+  display: block;
+  border: 3px solid #4f46e5;
+}
+
+.user-name {
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 5px;
+}
+
+.user-id {
+  color: #64748b;
+  font-size: 0.9rem;
+}
+
+.user-vk-id {
+  color: #4f46e5;
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+/* Дополнительные фотографии */
+.additional-photos {
+  margin-top: 15px;
+  text-align: center;
+}
+
+.additional-photos h4 {
+  color: #1e293b;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.photo-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+}
+
+.photo-thumb {
+  width: 60px;
+  height: 60px;
+  border-radius: 8px;
+  border: 2px solid #e2e8f0;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.photo-thumb:hover {
+  transform: scale(1.1);
+  border-color: #4f46e5;
+}
+
+/* Дополнительная информация о пользователе */
+.user-additional-info {
+  margin-top: 15px;
+  text-align: left;
+}
+
+.info-item {
+  margin-bottom: 8px;
+  padding: 5px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.info-item:last-child {
+  border-bottom: none;
+}
+
+.info-item strong {
+  color: #1e293b;
+  margin-right: 8px;
+}
+
+.info-item a {
+  color: #4f46e5;
+  text-decoration: none;
+}
+
+.info-item a:hover {
+  text-decoration: underline;
+}
+
+.info-item.error {
+  color: #dc2626;
+  background: #fef2f2;
+  padding: 8px;
+  border-radius: 4px;
+  border-left: 4px solid #dc2626;
+}
+
+.retry-user-data-btn {
+  margin-left: 10px;
+  padding: 4px 8px;
+  background: #dc2626;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.retry-user-data-btn:hover {
+  background: #b91c1c;
+}
+
+/* Базовая информация об авторизации */
+.basic-auth-info {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f0f9ff;
+  border-radius: 8px;
+  border-left: 4px solid #0ea5e9;
+}
+
+/* Информация о полученных данных */
+.data-info {
+  margin-top: 15px;
+  padding: 10px;
+  background: #f0fdf4;
+  border-radius: 8px;
+  border-left: 4px solid #22c55e;
+}
+
+.token-info {
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+}
+
+.token-info strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+.token-code {
+  word-break: break-all;
+  font-size: 0.8rem;
+  color: #64748b;
+  background: #e2e8f0;
+  padding: 4px 8px;
+  border-radius: 4px;
+  display: block;
+}
+
+.scope-info {
+  padding-top: 15px;
+  border-top: 1px solid #e2e8f0;
+  margin-top: 15px;
+}
+
+.scope-info strong {
+  display: block;
+  margin-bottom: 8px;
+  color: #1e293b;
+}
+
+/* Блок со списком друзей */
+.friends-section {
+  margin-top: 30px;
+  padding: 20px;
+  background: #f8fafc;
+  border-radius: 12px;
+  border-left: 4px solid #10b981;
+}
+
+.friends-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.friends-header h3 {
+  color: #1e293b;
+  font-size: 1.3rem;
+  margin: 0;
+}
+
+.load-friends-btn {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.3s ease;
+}
+
+.load-friends-btn:hover {
+  background: #059669;
+}
+
+.friends-loading {
+  text-align: center;
+  padding: 20px;
+  color: #64748b;
+}
+
+.friends-count {
+  color: #1e293b;
+  font-weight: 500;
+  margin-bottom: 15px;
+}
+
+.friends-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 15px;
+}
+
+.friend-card {
+  background: white;
+  border-radius: 8px;
+  padding: 15px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.friend-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.friend-avatar {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+.friend-photo {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #e2e8f0;
+}
+
+.friend-photo-placeholder {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  background: #4f46e5;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+.online-indicator {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 12px;
+  height: 12px;
+  background: #10b981;
+  border: 2px solid white;
+  border-radius: 50%;
+}
+
+.friend-info {
+  text-align: center;
+}
+
+.friend-name {
+  font-weight: 600;
+  color: #1e293b;
+  margin-bottom: 4px;
+  font-size: 0.9rem;
+}
+
+.friend-id {
+  color: #64748b;
+  font-size: 0.8rem;
+  margin-bottom: 6px;
+}
+
+.friend-status {
+  font-size: 0.8rem;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.friend-status.online {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.friend-status.offline {
+  background: #f3f4f6;
+  color: #6b7280;
+}
+
+.no-friends {
+  text-align: center;
+  padding: 20px;
+  color: #64748b;
+  font-style: italic;
+}
+
+/* Logout Button */
+.logout-btn {
+  background: #ef4444;
+  color: white;
+  border: none;
+  padding: 12px 30px;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.logout-btn:hover {
+  background: #dc2626;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 600px) {
+  .auth-form {
+    padding: 30px 20px;
+  }
+
+  .info-section {
+    padding: 20px;
+  }
+
+  .user-info {
+    padding: 20px;
+  }
+
+  .friends-section {
+    margin-top: 20px;
+    padding: 15px;
+  }
+
+  .friends-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .friends-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: 10px;
+  }
+
+  .friend-card {
+    padding: 10px;
+  }
+
+  .friend-photo {
+    width: 50px;
+    height: 50px;
+  }
+
+  .friend-photo-placeholder {
+    width: 50px;
+    height: 50px;
+    font-size: 1rem;
+  }
+}

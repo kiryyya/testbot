@@ -1,15 +1,17 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
+import { useAppSelector } from '../store';
+import { selectUser } from '../store/authSlice';
 import './Sidebar.css';
 
 interface SidebarProps {
   isOpen: boolean;
   toggleSidebar: () => void;
   onLogout: () => void;
-  user: {email: string; password: string} | null;
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout, user }) => {
+const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout }) => {
+  const user = useAppSelector(selectUser);
   const location = useLocation();
 
   const menuItems = [
@@ -24,20 +26,20 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout, user
       icon: 'ADMIN'
     },
     {
-      path: '/users',
-      name: 'Пользователи',
-      icon: 'USERS'
+      path: '/communities',
+      name: 'Сообщества',
+      icon: 'COMMUNITIES'
     },
-    {
-      path: '/vk-messages',
-      name: 'VK Сообщения',
-      icon: 'MESSAGES'
-    },
-    {
-      path: '/analytics',
-      name: 'Аналитика',
-      icon: 'ANALYTICS'
-    }
+    // {
+    //   path: '/vk-messages',
+    //   name: 'VK Сообщения',
+    //   icon: 'MESSAGES'
+    // },
+    // {
+    //   path: '/analytics',
+    //   name: 'Аналитика',
+    //   icon: 'ANALYTICS'
+    // }
   ];
 
   return (
@@ -84,7 +86,12 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout, user
             <div className="sidebar-user">
               <div className="sidebar-user-info">
                 <span className="sidebar-user-icon">USER</span>
-                <span className="sidebar-user-name">{user?.email || 'Пользователь'}</span>
+                <span className="sidebar-user-name">
+                  {user?.first_name && user?.last_name 
+                    ? `${user.first_name} ${user.last_name}` 
+                    : user?.first_name || 'Пользователь VK'
+                  }
+                </span>
               </div>
               <button 
                 className="sidebar-logout-btn"
