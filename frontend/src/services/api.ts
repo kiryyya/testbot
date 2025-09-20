@@ -1,5 +1,5 @@
 import axios from 'axios';
-import { UserData, VkMessage, ApiResponse } from '../types';
+import { UserData, ApiResponse } from '../types';
 
 const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:5001/api';
 
@@ -41,17 +41,6 @@ export const apiService = {
     return response.data;
   },
 
-  // VK сообщения
-  getVkMessages: async (limit?: number): Promise<ApiResponse<VkMessage[]>> => {
-    const response = await api.get(`/vk/messages${limit ? `?limit=${limit}` : ''}`);
-    return response.data;
-  },
-
-  // VK лайки
-  getVkLikes: async (): Promise<ApiResponse<any>> => {
-    const response = await api.get('/vk/likes');
-    return response.data;
-  },
 };
 
 export default api;

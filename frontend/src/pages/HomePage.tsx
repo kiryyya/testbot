@@ -1,8 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import UserForm from '../components/UserForm';
 import DataList from '../components/DataList';
-import VkMessages from '../components/VkMessages';
-import VkLikesCounter from '../components/VkLikesCounter';
 import { apiService } from '../services/api';
 import { UserData } from '../types';
 import './HomePage.css';
@@ -10,8 +7,6 @@ import './HomePage.css';
 const HomePage: React.FC = () => {
   const [data, setData] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(false);
-  const [submitLoading, setSubmitLoading] = useState(false);
-  const [editingItem, setEditingItem] = useState<UserData | null>(null);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
@@ -39,45 +34,10 @@ const HomePage: React.FC = () => {
     }
   };
 
-  // Создать новую запись
-  const handleSubmit = async (formData: Omit<UserData, 'id' | 'created_at' | 'updated_at'>) => {
-    setSubmitLoading(true);
-    try {
-      if (editingItem) {
-        // Обновление существующей записи
-        const response = await apiService.updateData(editingItem.id!, formData);
-        if (response.success) {
-          showNotification('Данные успешно обновлены!', 'success');
-          setEditingItem(null);
-          await loadData();
-        }
-      } else {
-        // Создание новой записи
-        const response = await apiService.createData(formData);
-        if (response.success) {
-          showNotification('Данные успешно сохранены!', 'success');
-          await loadData();
-        }
-      }
-    } catch (error: any) {
-      console.error('Ошибка при сохранении:', error);
-      const errorMessage = error.response?.data?.message || 'Ошибка при сохранении данных';
-      showNotification(errorMessage, 'error');
-    } finally {
-      setSubmitLoading(false);
-    }
-  };
-
   // Редактировать запись
   const handleEdit = (item: UserData) => {
-    setEditingItem(item);
-    // Прокрутка к форме
+    // Прокрутка к началу страницы
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Отменить редактирование
-  const handleCancelEdit = () => {
-    setEditingItem(null);
   };
 
   // Удалить запись
@@ -91,11 +51,6 @@ const HomePage: React.FC = () => {
       if (response.success) {
         showNotification('Запись успешно удалена!', 'success');
         await loadData();
-        
-        // Если удаляем редактируемую запись, сбрасываем форму
-        if (editingItem?.id === id) {
-          setEditingItem(null);
-        }
       }
     } catch (error: any) {
       console.error('Ошибка при удалении:', error);
@@ -113,13 +68,10 @@ const HomePage: React.FC = () => {
     <div className="home-page">
       <header className="home-header">
         <h1>TestBot - Marketing Project</h1>
-        <p>Система управления данными и интеграция с VK Callback API</p>
+        <p>Система управления данными</p>
         <div className="features-badges">
-          <span className="badge">FORMS</span>
-          <span className="badge">VK MESSAGES</span>
-          <span className="badge">VK LIKES</span>
-          <span className="badge">REAL-TIME</span>
           <span className="badge">DATABASE</span>
+          <span className="badge">REAL-TIME</span>
         </div>
       </header>
 
@@ -132,34 +84,6 @@ const HomePage: React.FC = () => {
       )}
 
       <main className="home-main">
-        {/* Форма */}
-        <section>
-          <UserForm
-            onSubmit={handleSubmit}
-            initialData={editingItem || undefined}
-            isEditing={!!editingItem}
-            loading={submitLoading}
-          />
-          
-          {editingItem && (
-            <div className="editing-controls">
-              <button onClick={handleCancelEdit} className="cancel-button">
-                Отменить редактирование
-              </button>
-            </div>
-          )}
-        </section>
-
-        {/* VK Счетчик лайков */}
-        <section>
-          <VkLikesCounter refreshInterval={5} />
-        </section>
-
-        {/* VK Сообщения */}
-        <section>
-          <VkMessages refreshInterval={10} />
-        </section>
-
         {/* Список данных */}
         <section>
           <DataList

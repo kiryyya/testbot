@@ -732,72 +732,6 @@ const handleLikeRemove = async (likeData) => {
   }
 };
 
-// API для получения VK сообщений
-app.get('/api/vk/messages', async (req, res) => {
-  try {
-    const limit = parseInt(req.query.limit) || 20;
-    
-    // Получаем события из новой таблицы с информацией об игроках
-    const query = `
-      SELECT 
-        e.id,
-        e.vk_message_id,
-        e.vk_user_id,
-        p.user_name,
-        e.message_text,
-        e.event_type as message_type,
-        e.score_earned,
-        e.attempts_used,
-        e.lives_used,
-        e.timestamp,
-        e.created_at
-      FROM vk_events e
-      JOIN vk_players p ON e.player_id = p.id
-      ORDER BY e.created_at DESC
-      LIMIT $1
-    `;
-    
-    const result = await pool.query(query, [limit]);
-    
-    res.json({
-      success: true,
-      data: result.rows,
-      count: result.rows.length
-    });
-  } catch (error) {
-    console.error('Ошибка при получении VK сообщений:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при загрузке сообщений',
-      error: error.message
-    });
-  }
-});
-
-// API для получения статистики лайков
-app.get('/api/vk/likes', async (req, res) => {
-  try {
-    const result = await pool.query(
-      'SELECT * FROM vk_post_likes ORDER BY updated_at DESC'
-    );
-    
-    // Подсчитываем общее количество лайков
-    const totalLikes = result.rows.reduce((sum, post) => sum + post.likes_count, 0);
-    
-    res.json({
-      success: true,
-      data: result.rows,
-      total_likes: totalLikes,
-      posts_count: result.rows.length
-    });
-  } catch (error) {
-    console.error('Ошибка при получении статистики лайков:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Ошибка при получении статистики лайков'
-    });
-  }
-});
 
 // API для тестирования автоответов на комментарии
 app.post('/api/test/comment', async (req, res) => {
@@ -1189,8 +1123,6 @@ app.get('/', (req, res) => {
       'PUT /api/data/:id': 'Обновить запись',
       'DELETE /api/data/:id': 'Удалить запись',
       'POST /vk/callback': 'VK Callback API webhook',
-      'GET /api/vk/messages': 'Получить VK сообщения',
-      'GET /api/vk/likes': 'Получить статистику лайков постов',
       'GET /api/admin/settings': 'Получить настройки администратора',
       'POST /api/admin/settings': 'Сохранить настройки администратора',
       'POST /api/test/comment': 'Тестировать обработку комментария'

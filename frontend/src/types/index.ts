@@ -8,18 +8,6 @@ export interface UserData {
   updated_at?: string;
 }
 
-export interface VkMessage {
-  id: string;
-  vk_message_id: number;
-  vk_user_id: number;
-  user_name?: string;
-  message_text: string;
-  message_type: 'message' | 'wall_comment';
-  peer_id?: number;
-  conversation_message_id?: number;
-  timestamp: number;
-  created_at: string;
-}
 
 export interface ApiResponse<T> {
   success: boolean;
