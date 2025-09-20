@@ -15,7 +15,15 @@ const {
   getTopPlayers,
   getPlayerEvents,
   calculateDamage,
-  checkVictoryConditions
+  checkVictoryConditions,
+  // Новые функции для игры по постам
+  getPostGameSettings,
+  setPostGameSettings,
+  findOrCreatePostPlayer,
+  createPostEvent,
+  updatePostPlayerStats,
+  getPostTopPlayers,
+  getPostEvents
 } = require('./database');
 
 const app = express();
@@ -384,24 +392,43 @@ const handleWallComment = async (commentData) => {
       return;
     }
     
-    // 1. Найти или создать игрока
-    const player = await findOrCreateVkPlayer(
+    // 1. Проверяем настройки игры для этого поста
+    const postGameSettings = await getPostGameSettings(commentData.post_id);
+    
+    if (!postGameSettings || !postGameSettings.game_enabled) {
+      console.log('🎮 Игра отключена для этого поста, отправляем обычный автоответ');
+      // Отправляем обычный автоответ без игровой логики
+      await replyToComment(commentData, null, false, 0, false);
+      return;
+    }
+    
+    console.log('🎮 Игра включена для поста:', {
+      post_id: commentData.post_id,
+      game_enabled: postGameSettings.game_enabled,
+      attempts_per_player: postGameSettings.attempts_per_player,
+      lives_per_player: postGameSettings.lives_per_player
+    });
+    
+    // 2. Найти или создать игрока для этого поста
+    const player = await findOrCreatePostPlayer(
+      commentData.post_id,
       commentData.from_id,
       `VK User ${commentData.from_id}`,
       null
     );
     
-    console.log('🎮 Текущий игрок:', {
+    console.log('🎮 Текущий игрок поста:', {
       id: player.id,
+      post_id: player.post_id,
       vk_user_id: player.vk_user_id,
       attempts_left: player.attempts_left,
       lives_count: player.lives_count,
       total_score: player.total_score
     });
     
-    // 2. Проверяем, есть ли у игрока попытки
+    // 3. Проверяем, есть ли у игрока попытки для этого поста
     if (player.attempts_left <= 0) {
-      console.log('🚫 У игрока закончились попытки, отправляем уведомление');
+      console.log('🚫 У игрока закончились попытки для этого поста, отправляем уведомление');
       
       // Отправляем сообщение о том, что попытки закончились
       await replyToComment(commentData, player, false, 0, true); // true = attempts_finished
@@ -412,7 +439,7 @@ const handleWallComment = async (commentData) => {
       const livesToLose = calculateDamage();
     console.log(`🎲 Рассчитан урон: ${livesToLose} жизней`);
     
-    // 4. Создать событие комментария (с защитой от дублей)
+    // 4. Создать событие комментария для поста (с защитой от дублей)
     const eventData = {
       vkMessageId: commentData.id,
       vkUserId: commentData.from_id,
@@ -426,13 +453,13 @@ const handleWallComment = async (commentData) => {
       timestamp: commentData.date
     };
     
-    const event = await createVkEvent(eventData);
+    const event = await createPostEvent(eventData);
     
     if (event) {
-      console.log('📝 Новое событие создано:', event.id);
+      console.log('📝 Новое событие поста создано:', event.id);
       
-      // 5. Обновить статистику игрока
-      const updatedPlayer = await updatePlayerStats(
+      // 5. Обновить статистику игрока поста
+      const updatedPlayer = await updatePostPlayerStats(
         player.id,
         1, // попытки использованы
         livesToLose, // жизни использованы (случайный урон)
@@ -440,7 +467,7 @@ const handleWallComment = async (commentData) => {
       );
       
       if (updatedPlayer) {
-        console.log('📊 Статистика обновлена:', {
+        console.log('📊 Статистика игрока поста обновлена:', {
           attempts_left: updatedPlayer.attempts_left,
           lives_count: updatedPlayer.lives_count,
           total_score: updatedPlayer.total_score,
@@ -454,7 +481,7 @@ const handleWallComment = async (commentData) => {
         await replyToComment(commentData, updatedPlayer, isVictory, livesToLose, false); // false = attempts_finished
       }
     } else {
-      console.log('⚠️ Событие уже существует, пропускаем обработку (защита от дублей)');
+      console.log('⚠️ Событие поста уже существует, пропускаем обработку (защита от дублей)');
       // Не обрабатываем дубликаты - не отвечаем повторно
       return;
     }
@@ -1082,6 +1109,167 @@ app.post('/api/admin/settings', async (req, res) => {
   }
 });
 
+// ===== API ЭНДПОИНТЫ ДЛЯ ИГРЫ ПО ПОСТАМ =====
+
+// Получить настройки игры для поста
+app.get('/api/posts/:postId/game', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.postId);
+    const settings = await getPostGameSettings(postId);
+    
+    res.json({
+      success: true,
+      data: settings || {
+        post_id: postId,
+        game_enabled: false,
+        attempts_per_player: 5,
+        lives_per_player: 100
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при получении настроек игры поста:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении настроек игры поста'
+    });
+  }
+});
+
+// Обновить настройки игры для поста
+app.put('/api/posts/:postId/game', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.postId);
+    const { game_enabled, attempts_per_player = 5, lives_per_player = 100 } = req.body;
+    
+    const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player);
+    
+    res.json({
+      success: true,
+      message: 'Настройки игры поста обновлены',
+      data: settings
+    });
+  } catch (error) {
+    console.error('Ошибка при обновлении настроек игры поста:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при обновлении настроек игры поста'
+    });
+  }
+});
+
+// Получить все посты с игровыми настройками
+app.get('/api/posts/game', async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM post_game_settings 
+      ORDER BY updated_at DESC
+    `);
+    
+    res.json({
+      success: true,
+      data: result.rows
+    });
+  } catch (error) {
+    console.error('Ошибка при получении постов с играми:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении постов с играми'
+    });
+  }
+});
+
+// Получить игроков конкретного поста
+app.get('/api/posts/:postId/players', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.postId);
+    const limit = parseInt(req.query.limit) || 50;
+    
+    const players = await getPostTopPlayers(postId, limit);
+    
+    res.json({
+      success: true,
+      data: players
+    });
+  } catch (error) {
+    console.error('Ошибка при получении игроков поста:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении игроков поста'
+    });
+  }
+});
+
+// Получить события конкретного поста
+app.get('/api/posts/:postId/events', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.postId);
+    const limit = parseInt(req.query.limit) || 50;
+    
+    const events = await getPostEvents(postId, limit);
+    
+    res.json({
+      success: true,
+      data: events
+    });
+  } catch (error) {
+    console.error('Ошибка при получении событий поста:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении событий поста'
+    });
+  }
+});
+
+// Получить статистику поста
+app.get('/api/posts/:postId/stats', async (req, res) => {
+  try {
+    const postId = parseInt(req.params.postId);
+    
+    // Статистика игроков поста
+    const playersStatsQuery = `
+      SELECT 
+        COUNT(*) as total_players,
+        SUM(total_score) as total_score,
+        AVG(total_score) as avg_score,
+        MAX(total_score) as max_score,
+        SUM(attempts_left) as total_attempts_left,
+        SUM(lives_count) as total_lives
+      FROM post_players
+      WHERE post_id = $1 AND is_active = true
+    `;
+    
+    const eventsStatsQuery = `
+      SELECT 
+        COUNT(*) as total_events,
+        SUM(score_earned) as total_score_earned,
+        SUM(attempts_used) as total_attempts_used,
+        SUM(lives_used) as total_lives_used
+      FROM post_events
+      WHERE post_id = $1
+    `;
+    
+    const [playersResult, eventsResult] = await Promise.all([
+      pool.query(playersStatsQuery, [postId]),
+      pool.query(eventsStatsQuery, [postId])
+    ]);
+    
+    res.json({
+      success: true,
+      data: {
+        post_id: postId,
+        players: playersResult.rows[0],
+        events: eventsResult.rows[0]
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при получении статистики поста:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении статистики поста'
+    });
+  }
+});
+
 // Функция для получения настройки из базы данных
 const getSetting = async (key) => {
   try {
@@ -1125,7 +1313,13 @@ app.get('/', (req, res) => {
       'POST /vk/callback': 'VK Callback API webhook',
       'GET /api/admin/settings': 'Получить настройки администратора',
       'POST /api/admin/settings': 'Сохранить настройки администратора',
-      'POST /api/test/comment': 'Тестировать обработку комментария'
+      'POST /api/test/comment': 'Тестировать обработку комментария',
+      'GET /api/posts/:postId/game': 'Получить настройки игры поста',
+      'PUT /api/posts/:postId/game': 'Обновить настройки игры поста',
+      'GET /api/posts/game': 'Получить все посты с играми',
+      'GET /api/posts/:postId/players': 'Получить игроков поста',
+      'GET /api/posts/:postId/events': 'Получить события поста',
+      'GET /api/posts/:postId/stats': 'Получить статистику поста'
     }
   });
 });

@@ -95,6 +95,14 @@ const createTable = async () => {
       CREATE INDEX IF NOT EXISTS idx_vk_events_vk_user_id ON vk_events(vk_user_id);
       CREATE INDEX IF NOT EXISTS idx_vk_events_player_id ON vk_events(player_id);
       CREATE INDEX IF NOT EXISTS idx_vk_events_timestamp ON vk_events(timestamp);
+      CREATE INDEX IF NOT EXISTS idx_post_game_settings_post_id ON post_game_settings(post_id);
+      CREATE INDEX IF NOT EXISTS idx_post_players_post_id ON post_players(post_id);
+      CREATE INDEX IF NOT EXISTS idx_post_players_vk_user_id ON post_players(vk_user_id);
+      CREATE INDEX IF NOT EXISTS idx_post_players_post_user ON post_players(post_id, vk_user_id);
+      CREATE INDEX IF NOT EXISTS idx_post_events_post_id ON post_events(post_id);
+      CREATE INDEX IF NOT EXISTS idx_post_events_vk_user_id ON post_events(vk_user_id);
+      CREATE INDEX IF NOT EXISTS idx_post_events_player_id ON post_events(player_id);
+      CREATE INDEX IF NOT EXISTS idx_post_events_timestamp ON post_events(timestamp);
     `;
 
     // Добавляем дефолтные настройки автоответов
@@ -123,6 +131,66 @@ const createTable = async () => {
 
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
+
+    // Таблица настроек игры для постов
+    const postGameSettingsQuery = `
+      CREATE TABLE IF NOT EXISTS post_game_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id INTEGER NOT NULL UNIQUE,
+        game_enabled BOOLEAN DEFAULT false,
+        attempts_per_player INTEGER DEFAULT 5,
+        lives_per_player INTEGER DEFAULT 100,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+
+    // Таблица игроков по постам
+    const postPlayersQuery = `
+      CREATE TABLE IF NOT EXISTS post_players (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id INTEGER NOT NULL,
+        vk_user_id INTEGER NOT NULL,
+        user_name VARCHAR(255),
+        profile_photo VARCHAR(500),
+        attempts_left INTEGER DEFAULT 5,
+        lives_count INTEGER DEFAULT 100,
+        total_score INTEGER DEFAULT 0,
+        last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        is_active BOOLEAN DEFAULT true,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(post_id, vk_user_id)
+      );
+    `;
+
+    // Таблица событий по постам
+    const postEventsQuery = `
+      CREATE TABLE IF NOT EXISTS post_events (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        post_id INTEGER NOT NULL,
+        vk_message_id INTEGER NOT NULL UNIQUE,
+        vk_user_id INTEGER NOT NULL,
+        player_id UUID NOT NULL,
+        event_type VARCHAR(50) DEFAULT 'wall_comment',
+        message_text TEXT NOT NULL,
+        score_earned INTEGER DEFAULT 0,
+        attempts_used INTEGER DEFAULT 0,
+        lives_used INTEGER DEFAULT 0,
+        timestamp INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (player_id) REFERENCES post_players(id) ON DELETE CASCADE
+      );
+    `;
+
+    await pool.query(postGameSettingsQuery);
+    console.log('✅ Таблица post_game_settings создана или уже существует');
+
+    await pool.query(postPlayersQuery);
+    console.log('✅ Таблица post_players создана или уже существует');
+
+    await pool.query(postEventsQuery);
+    console.log('✅ Таблица post_events создана или уже существует');
 
     await pool.query(indexesQuery);
     console.log('✅ Индексы созданы');
@@ -335,6 +403,196 @@ const checkVictoryConditions = (player) => {
   return hasUsedAllAttempts && hasLost100Lives;
 };
 
+// ===== НОВЫЕ ФУНКЦИИ ДЛЯ ИГРЫ ПО ПОСТАМ =====
+
+// Функция для получения настроек игры поста
+const getPostGameSettings = async (postId) => {
+  try {
+    const query = `
+      SELECT * FROM post_game_settings 
+      WHERE post_id = $1
+    `;
+    const result = await pool.query(query, [postId]);
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Ошибка при получении настроек игры поста:', error);
+    return null;
+  }
+};
+
+// Функция для создания/обновления настроек игры поста
+const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100) => {
+  try {
+    const query = `
+      INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player)
+      VALUES ($1, $2, $3, $4)
+      ON CONFLICT (post_id) 
+      DO UPDATE SET 
+        game_enabled = $2,
+        attempts_per_player = $3,
+        lives_per_player = $4,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+    const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при настройке игры поста:', error);
+    return null;
+  }
+};
+
+// Функция для поиска или создания игрока поста
+const findOrCreatePostPlayer = async (postId, vkUserId, userName = null, profilePhoto = null) => {
+  try {
+    // Проверяем, существует ли игрок для этого поста
+    const checkQuery = `
+      SELECT * FROM post_players 
+      WHERE post_id = $1 AND vk_user_id = $2
+    `;
+    const checkResult = await pool.query(checkQuery, [postId, vkUserId]);
+
+    if (checkResult.rows.length > 0) {
+      // Игрок существует, обновляем время последней активности
+      const updateQuery = `
+        UPDATE post_players 
+        SET last_activity = CURRENT_TIMESTAMP,
+            user_name = COALESCE($3, user_name),
+            profile_photo = COALESCE($4, profile_photo),
+            updated_at = CURRENT_TIMESTAMP
+        WHERE post_id = $1 AND vk_user_id = $2
+        RETURNING *
+      `;
+      const updateResult = await pool.query(updateQuery, [postId, vkUserId, userName, profilePhoto]);
+      return updateResult.rows[0];
+    } else {
+      // Создаем нового игрока для этого поста
+      const createQuery = `
+        INSERT INTO post_players (
+          post_id, vk_user_id, user_name, profile_photo, 
+          attempts_left, lives_count, total_score
+        )
+        VALUES ($1, $2, $3, $4, 5, 100, 0)
+        RETURNING *
+      `;
+      const createResult = await pool.query(createQuery, [postId, vkUserId, userName, profilePhoto]);
+      return createResult.rows[0];
+    }
+  } catch (error) {
+    console.error('❌ Ошибка при поиске/создании игрока поста:', error);
+    return null;
+  }
+};
+
+// Функция для создания события поста
+const createPostEvent = async (eventData) => {
+  try {
+    const {
+      vkMessageId,
+      vkUserId,
+      playerId,
+      postId,
+      eventType = 'wall_comment',
+      messageText,
+      scoreEarned = 1,
+      attemptsUsed = 1,
+      livesUsed = 20,
+      timestamp
+    } = eventData;
+
+    const query = `
+      INSERT INTO post_events (
+        vk_message_id, vk_user_id, player_id, post_id,
+        event_type, message_text, score_earned, 
+        attempts_used, lives_used, timestamp
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+      ON CONFLICT (vk_message_id) DO NOTHING
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [
+      vkMessageId, vkUserId, playerId, postId,
+      eventType, messageText, scoreEarned,
+      attemptsUsed, livesUsed, timestamp
+    ]);
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при создании события поста:', error);
+    return null;
+  }
+};
+
+// Функция для обновления статистики игрока поста
+const updatePostPlayerStats = async (playerId, attemptsUsed = 0, livesUsed = 0, scoreEarned = 0) => {
+  try {
+    const query = `
+      UPDATE post_players 
+      SET 
+        attempts_left = GREATEST(0, attempts_left - $2),
+        lives_count = GREATEST(0, lives_count - $3),
+        total_score = total_score + $4,
+        last_activity = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [playerId, attemptsUsed, livesUsed, scoreEarned]);
+    
+    if (result.rows.length > 0) {
+      const player = result.rows[0];
+      console.log(`📊 Статистика игрока поста обновлена: попытки ${player.attempts_left}, жизни ${player.lives_count}, очки ${player.total_score}`);
+      return player;
+    }
+    return null;
+  } catch (error) {
+    console.error('❌ Ошибка при обновлении статистики игрока поста:', error);
+    return null;
+  }
+};
+
+// Функция для получения топ игроков поста
+const getPostTopPlayers = async (postId, limit = 10) => {
+  try {
+    const query = `
+      SELECT 
+        vk_user_id, user_name, total_score, 
+        attempts_left, lives_count, 
+        created_at, last_activity
+      FROM post_players 
+      WHERE post_id = $1 AND is_active = true
+      ORDER BY total_score DESC, created_at ASC
+      LIMIT $2
+    `;
+    
+    const result = await pool.query(query, [postId, limit]);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка при получении топа игроков поста:', error);
+    return [];
+  }
+};
+
+// Функция для получения событий поста
+const getPostEvents = async (postId, limit = 50) => {
+  try {
+    const query = `
+      SELECT * FROM post_events 
+      WHERE post_id = $1
+      ORDER BY timestamp DESC
+      LIMIT $2
+    `;
+    
+    const result = await pool.query(query, [postId, limit]);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка при получении событий поста:', error);
+    return [];
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -345,5 +603,13 @@ module.exports = {
   getTopPlayers,
   getPlayerEvents,
   calculateDamage,
-  checkVictoryConditions
+  checkVictoryConditions,
+  // Новые функции для игры по постам
+  getPostGameSettings,
+  setPostGameSettings,
+  findOrCreatePostPlayer,
+  createPostEvent,
+  updatePostPlayerStats,
+  getPostTopPlayers,
+  getPostEvents
 };

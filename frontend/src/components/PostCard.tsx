@@ -1,5 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { VKPost, formatPostDate, getAttachmentTypeText } from '../services/vkApi';
+import PostGameSettings from './PostGameSettings';
 import './PostCard.css';
 
 interface PostCardProps {
@@ -7,6 +8,8 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post }) => {
+  const [showGameSettings, setShowGameSettings] = useState(false);
+
   // Обработка текста поста
   const formatPostText = (text: string): string => {
     if (!text) return '';
@@ -217,6 +220,25 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
           )}
         </div>
       </div>
+
+      {/* Кнопка управления игрой */}
+      <div className="post-actions">
+        <button
+          onClick={() => setShowGameSettings(true)}
+          className="game-settings-btn"
+          title="Настройки игры для этого поста"
+        >
+          🎮 Настройки игры
+        </button>
+      </div>
+
+      {/* Модальное окно настроек игры */}
+      {showGameSettings && (
+        <PostGameSettings
+          postId={post.id}
+          onClose={() => setShowGameSettings(false)}
+        />
+      )}
     </div>
   );
 };

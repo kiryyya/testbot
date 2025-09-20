@@ -41,6 +41,48 @@ export const apiService = {
     return response.data;
   },
 
+  // ===== API ДЛЯ ИГРЫ ПО ПОСТАМ =====
+
+  // Получить настройки игры для поста
+  getPostGameSettings: async (postId: number): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/posts/${postId}/game`);
+    return response.data;
+  },
+
+  // Обновить настройки игры для поста
+  updatePostGameSettings: async (postId: number, settings: {
+    game_enabled: boolean;
+    attempts_per_player?: number;
+    lives_per_player?: number;
+  }): Promise<ApiResponse<any>> => {
+    const response = await api.put(`/posts/${postId}/game`, settings);
+    return response.data;
+  },
+
+  // Получить все посты с игровыми настройками
+  getAllPostsWithGames: async (): Promise<ApiResponse<any[]>> => {
+    const response = await api.get('/posts/game');
+    return response.data;
+  },
+
+  // Получить игроков поста
+  getPostPlayers: async (postId: number, limit?: number): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/posts/${postId}/players${limit ? `?limit=${limit}` : ''}`);
+    return response.data;
+  },
+
+  // Получить события поста
+  getPostEvents: async (postId: number, limit?: number): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/posts/${postId}/events${limit ? `?limit=${limit}` : ''}`);
+    return response.data;
+  },
+
+  // Получить статистику поста
+  getPostStats: async (postId: number): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/posts/${postId}/stats`);
+    return response.data;
+  },
+
 };
 
 export default api;
