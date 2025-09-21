@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import AdminPanel from './pages/AdminPanel';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDetailPage from './pages/CommunityDetailPage';
+import GameSettingsPage from './pages/GameSettingsPage';
 import LoginPage from './pages/LoginPage';
 import { useAppDispatch, useAppSelector } from './store';
 import { loginSuccess, logout, restoreAuth, selectIsAuthenticated } from './store/authSlice';
@@ -69,6 +70,7 @@ function App() {
           <Route path="/" element={<Layout onLogout={handleLogout} />}>
             <Route index element={<HomePage />} />
             <Route path="admin" element={<AdminPanel />} />
+            <Route path="game-settings" element={<GameSettingsPage />} />
             {/* Заглушки для остальных страниц */}
             <Route path="communities" element={<CommunitiesPage />} />
             <Route path="communities/:communityId" element={<CommunityDetailPage />} />

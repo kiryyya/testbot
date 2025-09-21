@@ -26,6 +26,11 @@ const Sidebar: React.FC<SidebarProps> = ({ isOpen, toggleSidebar, onLogout }) =>
       icon: 'ADMIN'
     },
     {
+      path: '/game-settings',
+      name: 'Настройки игры',
+      icon: 'GAME'
+    },
+    {
       path: '/communities',
       name: 'Сообщества',
       icon: 'COMMUNITIES'

@@ -3,6 +3,7 @@ const cors = require('cors');
 const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
+const OpenAI = require('openai');
 require('dotenv').config({ path: './config.env' });
 
 const { 
@@ -33,6 +34,11 @@ const PORT = process.env.PORT || 5001;
 app.use(cors());
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
+
+// Инициализация OpenAI
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
 
 // Инициализация базы данных при запуске сервера
 const initializeDatabase = async () => {
@@ -491,6 +497,84 @@ const handleWallComment = async (commentData) => {
   }
 };
 
+// Функция для генерации текста ответа через GPT
+const generateReplyText = async (originalText, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
+  try {
+    console.log('🤖 Генерация текста ответа через GPT:', {
+      originalText: originalText.substring(0, 100) + '...',
+      isVictory,
+      livesLost,
+      attemptsFinished,
+      hasPlayerData: !!playerData
+    });
+
+    // Формируем контекст для GPT
+    let systemPrompt = `Ты - дружелюбный бот для игрового сообщества ВКонтакте. Твоя задача - генерировать уникальные, позитивные ответы на комментарии пользователей.
+
+Правила:
+- Отвечай на русском языке
+- Будь дружелюбным и позитивным
+- Используй эмодзи для выразительности
+- ВСЕГДА включай игровую статистику в свой ответ
+- Каждый ответ должен быть уникальным и креативным
+- Адаптируй тон под контекст (победа, поражение, обычная игра)
+- Используй разные формулировки и стили для каждого ответа`;
+
+    let userPrompt = `Пользователь написал комментарий: "${originalText}"`;
+
+    // Добавляем игровую статистику в промпт
+    if (playerData) {
+      userPrompt += `\n\nИгровая статистика пользователя:
+- Попыток осталось: ${playerData.attempts_left}
+- Жизней осталось: ${playerData.lives_count}
+- Очков набрано: ${playerData.total_score}`;
+      
+      if (livesLost > 0) {
+        userPrompt += `\n- Урон в этом ходу: -${livesLost} жизней`;
+      }
+    }
+
+    if (isVictory) {
+      userPrompt += `\n\n🎉 ПОБЕДА! Пользователь прошел игру! Поздравь его с победой и упомяни про приз.`;
+    } else if (attemptsFinished) {
+      userPrompt += `\n\n🚫 У пользователя закончились попытки. Поддержи его и объясни ситуацию.`;
+    } else if (playerData) {
+      if (playerData.lives_count <= 20) {
+        userPrompt += `\n\n💔 У пользователя мало жизней! Поддержи его.`;
+      } else if (playerData.attempts_left <= 2) {
+        userPrompt += `\n\n🔥 У пользователя мало попыток! Поддержи его.`;
+      } else {
+        userPrompt += `\n\n🎮 Пользователь продолжает игру. Поддержи его.`;
+      }
+    }
+
+    userPrompt += `\n\nСгенерируй уникальный ответ, который включает всю игровую статистику естественным образом. Будь креативным и используй разные стили!`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-3.5-turbo",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: userPrompt }
+      ],
+      max_tokens: 200,
+      temperature: 0.9 // Увеличиваем температуру для большей креативности
+    });
+
+    const generatedText = completion.choices[0].message.content.trim();
+    console.log('✅ GPT сгенерировал уникальный текст:', generatedText);
+    
+    return generatedText;
+
+  } catch (error) {
+    console.error('❌ Ошибка генерации текста через GPT:', error);
+    // Fallback на дефолтный текст если GPT недоступен
+    if (playerData) {
+      return `Спасибо за комментарий! 🎮 Попытки: ${playerData.attempts_left} | 💜 Жизни: ${playerData.lives_count} | ⭐ Очки: ${playerData.total_score}`;
+    }
+    return 'Спасибо за комментарий!';
+  }
+};
+
 // Функция для ответа на комментарий
 const replyToComment = async (commentData, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
   try {
@@ -536,63 +620,15 @@ const replyToComment = async (commentData, playerData = null, isVictory = false,
       return;
     }
     
-    // Получаем текст автоответа из настроек
-    const autoReplyText = await getSetting('auto_reply_text') || 'удачно';
+    // Генерируем текст ответа через GPT
+    const originalText = commentData.text || '';
+    const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished);
     
     // Формируем текст ответа с игровой статистикой
-    const originalText = commentData.text || '';
     let replyText;
     
-    // Проверяем тип сообщения
-    if (isVictory) {
-      // Сообщение о победе
-      replyText = `${originalText} ${autoReplyText}\n\n🎉🏆 ВЫ ПОБЕДИЛИ! 🏆🎉\n\nВы прошли все 5 попыток и потратили все жизни! Поздравляем с победой! 🎊`;
-      
-      if (playerData) {
-        replyText += `\n\n📊 Финальная статистика:\n⭐ Итоговые очки: ${playerData.total_score}\n💀 Последний урон: -${livesLost} жизней`;
-      }
-      
-      replyText += `\n\n🎁 ДЛЯ ПОЛУЧЕНИЯ ПРИЗА:\nНапишите нам в личные сообщения слово "Приз" и получите свой купон!`;
-    } else if (attemptsFinished) {
-      // Сообщение о закончившихся попытках
-      replyText = `${originalText} ${autoReplyText}\n\n🚫 ПОПЫТКИ ЗАКОНЧИЛИСЬ! 🚫\n\nУ вас больше нет попыток для игры.`;
-      
-      if (playerData) {
-        replyText += `\n\n📊 Ваша статистика:\n🎮 Попытки: ${playerData.attempts_left} | 💜 Жизни: ${playerData.lives_count} | ⭐ Очки: ${playerData.total_score}`;
-        
-        if (playerData.lives_count > 0) {
-          replyText += `\n\n💡 Жизни еще остались, но попытки кончились. Игра завершена.`;
-        }
-      }
-    } else {
-      // Обычный ответ с игровой статистикой
-      replyText = `${originalText} ${autoReplyText}`;
-      
-      if (playerData) {
-        const gameStats = `\n🎮 Попытки: ${playerData.attempts_left} | 💜 Жизни: ${playerData.lives_count} | ⭐ Очки: ${playerData.total_score}`;
-        replyText += gameStats;
-        
-        // Показываем урон этого хода
-        if (livesLost > 0) {
-          replyText += `\n💥 Урон: -${livesLost} жизней`;
-        }
-        
-        // Дополнительные сообщения в зависимости от статуса
-        if (playerData.attempts_left <= 1) {
-          replyText += '\n⚠️ Осталась последняя попытка!';
-        } else if (playerData.attempts_left <= 2) {
-          replyText += '\n🔥 Попыток мало, будь осторожнее!';
-        }
-        
-        if (playerData.lives_count <= 20) {
-          replyText += '\n💔 Жизней мало!';
-        }
-        
-        if (playerData.lives_count <= 0) {
-          replyText += '\n💀 Жизни закончились!';
-        }
-      }
-    }
+    // Используем только GPT-сгенерированный текст (уже включает всю статистику)
+    replyText = autoReplyText;
     
     const vkApiUrl = 'https://api.vk.com/method/wall.createComment';
     const params = {
@@ -1054,42 +1090,100 @@ app.get('/api/admin/settings', async (req, res) => {
 // Сохранить настройки
 app.post('/api/admin/settings', async (req, res) => {
   try {
-    const { autoReplyEnabled, autoReplyText } = req.body;
+    const { 
+      autoReplyEnabled, 
+      autoReplyText, 
+      gameEnabled, 
+      defaultAttempts, 
+      defaultLives 
+    } = req.body;
     
-    // Валидация
-    if (typeof autoReplyEnabled !== 'boolean') {
+    // Валидация автоответов
+    if (autoReplyEnabled !== undefined && typeof autoReplyEnabled !== 'boolean') {
       return res.status(400).json({
         success: false,
         message: 'autoReplyEnabled должно быть boolean'
       });
     }
     
-    if (typeof autoReplyText !== 'string' || autoReplyText.trim().length === 0) {
+    if (autoReplyText !== undefined && (typeof autoReplyText !== 'string' || autoReplyText.trim().length === 0)) {
       return res.status(400).json({
         success: false,
         message: 'autoReplyText должно быть непустой строкой'
       });
     }
     
+    // Валидация настроек игры
+    if (gameEnabled !== undefined && typeof gameEnabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'gameEnabled должно быть boolean'
+      });
+    }
+    
+    if (defaultAttempts !== undefined && (typeof defaultAttempts !== 'number' || defaultAttempts < 1 || defaultAttempts > 20)) {
+      return res.status(400).json({
+        success: false,
+        message: 'defaultAttempts должно быть числом от 1 до 20'
+      });
+    }
+    
+    if (defaultLives !== undefined && (typeof defaultLives !== 'number' || defaultLives < 1 || defaultLives > 1000)) {
+      return res.status(400).json({
+        success: false,
+        message: 'defaultLives должно быть числом от 1 до 1000'
+      });
+    }
+    
     // Обновляем настройки в базе данных
-    const updateEnabledQuery = `
-      UPDATE admin_settings 
-      SET setting_value = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE setting_key = 'auto_reply_enabled'
-    `;
+    const updates = [];
     
-    const updateTextQuery = `
-      UPDATE admin_settings 
-      SET setting_value = $1, updated_at = CURRENT_TIMESTAMP 
-      WHERE setting_key = 'auto_reply_text'
-    `;
+    if (autoReplyEnabled !== undefined) {
+      updates.push({
+        query: `UPDATE admin_settings SET setting_value = $1, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'auto_reply_enabled'`,
+        params: [autoReplyEnabled.toString()]
+      });
+    }
     
-    await pool.query(updateEnabledQuery, [autoReplyEnabled.toString()]);
-    await pool.query(updateTextQuery, [autoReplyText.trim()]);
+    if (autoReplyText !== undefined) {
+      updates.push({
+        query: `UPDATE admin_settings SET setting_value = $1, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'auto_reply_text'`,
+        params: [autoReplyText.trim()]
+      });
+    }
     
-    console.log('⚙️ Настройки автоответов обновлены:', {
+    if (gameEnabled !== undefined) {
+      updates.push({
+        query: `UPDATE admin_settings SET setting_value = $1, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'game_enabled'`,
+        params: [gameEnabled.toString()]
+      });
+    }
+    
+    if (defaultAttempts !== undefined) {
+      updates.push({
+        query: `UPDATE admin_settings SET setting_value = $1, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'default_attempts'`,
+        params: [defaultAttempts.toString()]
+      });
+    }
+    
+    if (defaultLives !== undefined) {
+      updates.push({
+        query: `UPDATE admin_settings SET setting_value = $1, updated_at = CURRENT_TIMESTAMP WHERE setting_key = 'default_lives'`,
+        params: [defaultLives.toString()]
+      });
+    }
+    
+    // Выполняем все обновления
+    for (const update of updates) {
+      await pool.query(update.query, update.params);
+    }
+    
+    console.log('⚙️ Настройки обновлены:', {
       autoReplyEnabled,
-      autoReplyText: autoReplyText.trim()
+      autoReplyText: autoReplyText?.trim(),
+      gameEnabled,
+      defaultAttempts,
+      defaultLives
     });
     
     res.json({
@@ -1097,7 +1191,10 @@ app.post('/api/admin/settings', async (req, res) => {
       message: 'Настройки успешно сохранены',
       settings: {
         autoReplyEnabled,
-        autoReplyText: autoReplyText.trim()
+        autoReplyText: autoReplyText?.trim(),
+        gameEnabled,
+        defaultAttempts,
+        defaultLives
       }
     });
   } catch (error) {
