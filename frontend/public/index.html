@@ -9,6 +9,17 @@
       name="description"
       content="Web site created using create-react-app"
     />
+    <!-- Content Security Policy для VK ID (упрощенная для разработки) -->
+    <meta http-equiv="Content-Security-Policy" content="
+      default-src 'self';
+      script-src 'self' 'unsafe-inline' 'unsafe-eval' https://unpkg.com https://id.vk.com https://vk.com https://api.vk.com https://*.vk.com;
+      style-src 'self' 'unsafe-inline' https://id.vk.com https://*.vk.com;
+      img-src 'self' data: https: http:;
+      font-src 'self' data: https://id.vk.com https://*.vk.com;
+      connect-src 'self' https://id.vk.com https://api.vk.com https://oauth.vk.com https://*.vk.com http://localhost:5001;
+      frame-src 'self' https://id.vk.com https://*.vk.com;
+      frame-ancestors 'self' https://id.vk.com https://*.vk.com;
+    ">
     <link rel="apple-touch-icon" href="%PUBLIC_URL%/logo192.png" />
     <!--
       manifest.json provides metadata used when your web app is installed on a
@@ -25,6 +36,8 @@
       Learn how to configure a non-root public URL by running `npm run build`.
     -->
     <title>React App</title>
+    <!-- VK Bridge SDK -->
+    <script src="https://unpkg.com/@vkontakte/vk-bridge/dist/browser.min.js"></script>
   </head>
   <body>
     <noscript>You need to enable JavaScript to run this app.</noscript>

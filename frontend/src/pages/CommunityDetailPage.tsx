@@ -4,6 +4,8 @@ import { useAppSelector } from '../store';
 import { selectAuth } from '../store/authSlice';
 import { getGroupInfo, getCommunityPosts, VKGroup, VKPost, getAccessLevelText, getGroupTypeText } from '../services/vkApi';
 import PostCard from '../components/PostCard';
+import CommunitySettings from '../components/CommunitySettings';
+import CallbackSetup from '../components/CallbackSetup';
 import './CommunityDetailPage.css';
 
 const CommunityDetailPage: React.FC = () => {
@@ -400,6 +402,12 @@ const CommunityDetailPage: React.FC = () => {
             </div>
           </div>
         </div>
+
+        {/* Настройка Callback API */}
+        <CallbackSetup communityId={community.id} />
+
+        {/* Настройки автоответов для сообщества */}
+        <CommunitySettings communityId={community.id} />
           </>
         )}
 

@@ -45,11 +45,7 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className = '' }) => {
           {user.domain && (
             <div className="user-domain">@{user.domain}</div>
           )}
-          {user.online !== undefined && (
-            <div className={`user-status ${user.online ? 'online' : 'offline'}`}>
-              {user.online ? 'Онлайн' : 'Оффлайн'}
-            </div>
-          )}
+          {/* Статус online не отображается, т.к. VK ID SDK не возвращает точные данные */}
         </div>
       </div>
     </div>

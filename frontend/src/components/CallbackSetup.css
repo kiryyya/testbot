@@ -1,0 +1,238 @@
+.callback-setup-card {
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  padding: 24px;
+  margin-bottom: 24px;
+}
+
+.callback-setup-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.callback-setup-header h2 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  margin: 0;
+}
+
+.callback-status-badge {
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.callback-status-badge.configured {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+}
+
+.callback-status-badge.not-configured {
+  background-color: #fff3e0;
+  color: #e65100;
+}
+
+.callback-notification {
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin-bottom: 16px;
+  font-size: 14px;
+  animation: slideDown 0.3s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.callback-notification.success {
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-left: 4px solid #2e7d32;
+}
+
+.callback-notification.error {
+  background-color: #ffebee;
+  color: #c62828;
+  border-left: 4px solid #c62828;
+}
+
+.callback-notification.info {
+  background-color: #e3f2fd;
+  color: #1565c0;
+  border-left: 4px solid #1565c0;
+}
+
+.callback-setup-content {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.callback-description {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  line-height: 1.6;
+  margin: 0 0 8px 0;
+}
+
+.callback-requirements {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+}
+
+.callback-requirements li {
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  padding: 6px 0;
+  line-height: 1.6;
+}
+
+.callback-setup-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  border: none;
+  padding: 14px 24px;
+  border-radius: 8px;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.callback-setup-button:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(102, 126, 234, 0.4);
+}
+
+.callback-setup-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.callback-info-success {
+  background-color: #f1f8f4;
+  border: 1px solid #c8e6c9;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.callback-info-success p {
+  color: var(--color-text-primary);
+  font-size: 14px;
+  margin: 0 0 12px 0;
+}
+
+.callback-info-success p:first-child {
+  font-weight: 600;
+  color: #2e7d32;
+}
+
+.callback-events-list {
+  list-style: none;
+  padding: 0;
+  margin: 8px 0 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 8px;
+}
+
+.callback-events-list li {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-family: 'Courier New', monospace;
+  background-color: #ffffff;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid var(--color-border);
+}
+
+.callback-details {
+  background-color: #f8f9fa;
+  border: 1px solid var(--color-border);
+  border-radius: 8px;
+  padding: 16px;
+  margin-top: 12px;
+}
+
+.callback-detail-item {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.callback-detail-item:last-child {
+  margin-bottom: 0;
+}
+
+.callback-detail-label {
+  color: var(--color-text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.callback-detail-value {
+  background-color: #ffffff;
+  color: var(--color-text-primary);
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-family: 'Courier New', monospace;
+  font-size: 13px;
+  border: 1px solid var(--color-border);
+  word-break: break-all;
+}
+
+.callback-reconfigure-button {
+  background-color: #ffffff;
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  margin-top: 8px;
+}
+
+.callback-reconfigure-button:hover:not(:disabled) {
+  background-color: #f8f9fa;
+  border-color: #999;
+}
+
+.callback-reconfigure-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .callback-setup-card {
+    padding: 16px;
+  }
+
+  .callback-setup-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .callback-events-list {
+    grid-template-columns: 1fr;
+  }
+}

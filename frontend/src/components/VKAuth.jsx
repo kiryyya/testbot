@@ -21,6 +21,23 @@ const VKAuth = ({ onAuthSuccess }) => {
   };
 
   useEffect(() => {
+    // Проверяем localStorage - если уже авторизован, не инициализируем VK ID
+    const savedAuth = localStorage.getItem('auth');
+    if (savedAuth) {
+      try {
+        const authData = JSON.parse(savedAuth);
+        if (authData.isAuthenticated && authData.userId) {
+          console.log('✅ Пользователь уже авторизован, пропускаем VK ID инициализацию');
+          setIsLoading(false);
+          return; // НЕ инициализируем VK ID!
+        }
+      } catch (error) {
+        console.error('Ошибка при проверке сохраненной авторизации:', error);
+      }
+    }
+    
+    // Если не авторизован - инициализируем VK ID
+    console.log('Пользователь не авторизован, инициализируем VK ID...');
     initializeVKAuth();
   }, []);
 
@@ -905,7 +922,8 @@ const VKAuth = ({ onAuthSuccess }) => {
           </div>
         )}
         
-        {(authError || localError) && (
+        {/* Показываем ошибку только если виджет не загрузился */}
+        {(authError || localError) && !containerRef.current?.children.length && (
           <div className="error-container">
             <p className="error-message">{authError || localError}</p>
             <button onClick={initializeVKAuth} className="retry-btn">
