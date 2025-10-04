@@ -34,6 +34,8 @@ const {
   removeUserCommunity
 } = require('./database');
 
+//1
+
 const app = express();
 const PORT = process.env.PORT || 5001;
 
