@@ -223,7 +223,7 @@ const createTable = async () => {
     const postGameSettingsQuery = `
       CREATE TABLE IF NOT EXISTS post_game_settings (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        post_id INTEGER NOT NULL UNIQUE,
+        post_id TEXT NOT NULL UNIQUE,
         game_enabled BOOLEAN DEFAULT false,
         attempts_per_player INTEGER DEFAULT 5,
         lives_per_player INTEGER DEFAULT 100,
@@ -236,7 +236,7 @@ const createTable = async () => {
     const postPlayersQuery = `
       CREATE TABLE IF NOT EXISTS post_players (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        post_id INTEGER NOT NULL,
+        post_id TEXT NOT NULL,
         vk_user_id INTEGER NOT NULL,
         user_name VARCHAR(255),
         profile_photo VARCHAR(500),
@@ -255,7 +255,7 @@ const createTable = async () => {
     const postEventsQuery = `
       CREATE TABLE IF NOT EXISTS post_events (
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-        post_id INTEGER NOT NULL,
+        post_id TEXT NOT NULL,
         vk_message_id INTEGER NOT NULL UNIQUE,
         vk_user_id INTEGER NOT NULL,
         player_id UUID NOT NULL,
@@ -278,6 +278,48 @@ const createTable = async () => {
 
     await pool.query(postEventsQuery);
     console.log('✅ Таблица post_events создана или уже существует');
+    
+    // Миграция: изменение типа post_id с INTEGER на TEXT
+    const migratePostIdToText = `
+      DO $$
+      BEGIN
+        -- Изменяем тип post_id в post_game_settings
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'post_game_settings' 
+          AND column_name = 'post_id' 
+          AND data_type = 'integer'
+        ) THEN
+          ALTER TABLE post_game_settings ALTER COLUMN post_id TYPE TEXT USING post_id::TEXT;
+          RAISE NOTICE 'Миграция: post_game_settings.post_id изменен на TEXT';
+        END IF;
+        
+        -- Изменяем тип post_id в post_players
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'post_players' 
+          AND column_name = 'post_id' 
+          AND data_type = 'integer'
+        ) THEN
+          ALTER TABLE post_players ALTER COLUMN post_id TYPE TEXT USING post_id::TEXT;
+          RAISE NOTICE 'Миграция: post_players.post_id изменен на TEXT';
+        END IF;
+        
+        -- Изменяем тип post_id в post_events
+        IF EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'post_events' 
+          AND column_name = 'post_id' 
+          AND data_type = 'integer'
+        ) THEN
+          ALTER TABLE post_events ALTER COLUMN post_id TYPE TEXT USING post_id::TEXT;
+          RAISE NOTICE 'Миграция: post_events.post_id изменен на TEXT';
+        END IF;
+      END $$;
+    `;
+    
+    await pool.query(migratePostIdToText);
+    console.log('✅ Миграция: post_id изменен на TEXT во всех таблицах');
 
     await pool.query(indexesQuery);
     console.log('✅ Индексы созданы');

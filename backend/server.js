@@ -1834,7 +1834,7 @@ app.post('/api/communities/:communityId/settings', async (req, res) => {
 // Получить настройки игры для поста
 app.get('/api/posts/:postId/game', async (req, res) => {
   try {
-    const postId = parseInt(req.params.postId);
+    const postId = req.params.postId; // Оставляем как строку
     const settings = await getPostGameSettings(postId);
     
     res.json({
@@ -1858,8 +1858,10 @@ app.get('/api/posts/:postId/game', async (req, res) => {
 // Обновить настройки игры для поста
 app.put('/api/posts/:postId/game', async (req, res) => {
   try {
-    const postId = parseInt(req.params.postId);
+    const postId = req.params.postId; // Оставляем как строку, например "-232533026_161"
     const { game_enabled, attempts_per_player = 5, lives_per_player = 100 } = req.body;
+    
+    console.log('📝 Обновление настроек игры для поста:', { postId, game_enabled, attempts_per_player, lives_per_player });
     
     const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player);
     
@@ -1901,7 +1903,7 @@ app.get('/api/posts/game', async (req, res) => {
 // Получить игроков конкретного поста
 app.get('/api/posts/:postId/players', async (req, res) => {
   try {
-    const postId = parseInt(req.params.postId);
+    const postId = req.params.postId; // Оставляем как строку
     const limit = parseInt(req.query.limit) || 50;
     
     const players = await getPostTopPlayers(postId, limit);
@@ -1922,7 +1924,7 @@ app.get('/api/posts/:postId/players', async (req, res) => {
 // Получить события конкретного поста
 app.get('/api/posts/:postId/events', async (req, res) => {
   try {
-    const postId = parseInt(req.params.postId);
+    const postId = req.params.postId; // Оставляем как строку
     const limit = parseInt(req.query.limit) || 50;
     
     const events = await getPostEvents(postId, limit);
@@ -1943,7 +1945,7 @@ app.get('/api/posts/:postId/events', async (req, res) => {
 // Получить статистику поста
 app.get('/api/posts/:postId/stats', async (req, res) => {
   try {
-    const postId = parseInt(req.params.postId);
+    const postId = req.params.postId; // Оставляем как строку
     
     // Статистика игроков поста
     const playersStatsQuery = `
