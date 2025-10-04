@@ -149,15 +149,40 @@ const createTable = async () => {
       );
     `;
     
-    // Добавляем колонку secret_key если её нет (миграция для существующих таблиц)
-    const addSecretKeyColumn = `
+    // Миграции для добавления новых колонок в существующую таблицу
+    const addMissingColumns = `
       DO $$ 
       BEGIN
+        -- Добавляем confirmation_code если его нет
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'community_settings' AND column_name = 'confirmation_code'
+        ) THEN
+          ALTER TABLE community_settings ADD COLUMN confirmation_code VARCHAR(255);
+        END IF;
+        
+        -- Добавляем secret_key если его нет
         IF NOT EXISTS (
           SELECT 1 FROM information_schema.columns 
           WHERE table_name = 'community_settings' AND column_name = 'secret_key'
         ) THEN
           ALTER TABLE community_settings ADD COLUMN secret_key VARCHAR(255);
+        END IF;
+        
+        -- Добавляем callback_configured если его нет
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'community_settings' AND column_name = 'callback_configured'
+        ) THEN
+          ALTER TABLE community_settings ADD COLUMN callback_configured BOOLEAN DEFAULT false;
+        END IF;
+        
+        -- Добавляем callback_url если его нет
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'community_settings' AND column_name = 'callback_url'
+        ) THEN
+          ALTER TABLE community_settings ADD COLUMN callback_url TEXT;
         END IF;
       END $$;
     `;
@@ -165,8 +190,8 @@ const createTable = async () => {
     await pool.query(communitySettingsQuery);
     console.log('✅ Таблица community_settings создана или уже существует');
     
-    await pool.query(addSecretKeyColumn);
-    console.log('✅ Миграция: колонка secret_key добавлена (если отсутствовала)');
+    await pool.query(addMissingColumns);
+    console.log('✅ Миграция: добавлены недостающие колонки (confirmation_code, secret_key, callback_configured, callback_url)');
 
     // Таблица для связи пользователей и их добавленных сообществ
     const userCommunitiesQuery = `

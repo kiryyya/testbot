@@ -82,7 +82,7 @@ const CallbackSetup: React.FC<CallbackSetupProps> = ({ communityId }) => {
       const authUrl = `https://oauth.vk.com/authorize?` +
         `client_id=${appId}&` +
         `redirect_uri=${encodeURIComponent(redirectUri)}&` +
-        `scope=manage&` + // Используем только manage (включает все необходимое)
+        `scope=manage,wall,messages&` + // manage + wall (комментарии) + messages (личные сообщения)
         `response_type=code&` +
         `group_ids=${communityId}&` + // ID сообщества для OAuth
         `v=5.199`;

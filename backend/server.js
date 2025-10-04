@@ -204,15 +204,19 @@ app.delete('/api/data/:id', async (req, res) => {
 // Обработчик VK Callback API
 app.post('/vk/callback', async (req, res) => {
   try {
+    console.log('\n🔔 ===== VK CALLBACK ПОЛУЧЕН =====');
+    console.log('⏰ Время:', new Date().toISOString());
+    console.log('📍 IP отправителя:', req.ip);
+    console.log('🔑 Headers:', JSON.stringify(req.headers, null, 2));
+    console.log('📦 Body:', JSON.stringify(req.body, null, 2));
+    
     const { type, object, secret, group_id } = req.body;
     
-    console.log('📥 VK Callback получен:', { 
-      type,
-      group_id,
-      object: object ? 'есть данные' : 'нет данных',
-      headers: req.headers,
-      body: req.body
-    });
+    console.log('📊 Разбор данных:');
+    console.log('   Type:', type);
+    console.log('   Group ID:', group_id);
+    console.log('   Secret:', secret ? 'присутствует' : 'отсутствует');
+    console.log('   Object:', object ? 'есть данные' : 'нет данных');
     
     // Проверка секретного ключа из БД (для каждого сообщества свой)
     if (group_id && secret) {
@@ -233,20 +237,36 @@ app.post('/vk/callback', async (req, res) => {
       // Получаем confirmation code из настроек сообщества
       if (group_id) {
         const communitySettings = await getCommunitySettings(group_id);
+        console.log('📊 Настройки сообщества из БД:', communitySettings);
+        
         if (communitySettings && communitySettings.confirmation_code) {
-          console.log('✅ Отправляем confirmation code из БД');
-          return res.send(communitySettings.confirmation_code);
+          const code = String(communitySettings.confirmation_code).trim();
+          console.log('✅ Отправляем confirmation code из БД:', code);
+          console.log('📤 Тип ответа:', typeof code);
+          console.log('📤 Длина строки:', code.length);
+          console.log('📤 Точное значение (escaped):', JSON.stringify(code));
+          
+          // Устанавливаем правильные заголовки для plain text
+          res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+          return res.status(200).send(code);
+        } else {
+          console.error('❌ confirmation_code отсутствует в БД для группы', group_id);
         }
       }
       
       // Fallback на глобальный код (если есть)
-      console.log('⚠️ Используем глобальный confirmation code из .env');
-      return res.send(process.env.VK_CONFIRMATION_CODE || 'your_confirmation_code');
+      console.warn('⚠️ Используем глобальный confirmation code из .env (не рекомендуется!)');
+      const fallbackCode = String(process.env.VK_CONFIRMATION_CODE || 'your_confirmation_code').trim();
+      console.log('📤 Fallback код:', fallbackCode);
+      
+      res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+      return res.status(200).send(fallbackCode);
     }
     
     // Обработка входящих сообщений
     if (type === 'message_new') {
-      await handleNewMessage(object.message);
+      console.log('📨 Получено новое сообщение, передаем в handleNewMessage');
+      await handleNewMessage(object.message, group_id);
     }
     
     // Обработка комментариев к постам
@@ -271,30 +291,58 @@ app.post('/vk/callback', async (req, res) => {
     }
     
     // Обязательный ответ "ok" для VK
+    console.log('✅ Callback обработан успешно, отправляем "ok"');
+    console.log('🔔 ===== КОНЕЦ CALLBACK =====\n');
     res.send('ok');
   } catch (error) {
     console.error('❌ Ошибка в VK Callback:', error);
+    console.error('Stack:', error.stack);
+    console.log('🔔 ===== КОНЕЦ CALLBACK (С ОШИБКОЙ) =====\n');
     res.send('ok'); // Все равно отвечаем "ok" чтобы VK не отключил webhook
   }
 });
 
 // Функция обработки новых сообщений
-const handleNewMessage = async (message) => {
+const handleNewMessage = async (message, group_id) => {
   try {
-    console.log('💬 Новое сообщение VK:', {
+    console.log('\n💬 ===== ОБРАБОТКА НОВОГО СООБЩЕНИЯ =====');
+    console.log('📨 Данные сообщения:', {
       from: message.from_id,
       text: message.text,
-      date: message.date
+      date: message.date,
+      peer_id: message.peer_id,
+      group_id: group_id
     });
+    
+    // Получаем токен сообщества из БД
+    console.log('🔍 Получаем настройки сообщества для group_id:', group_id);
+    const communityData = await pool.query(
+      'SELECT access_token FROM user_communities WHERE community_id = $1',
+      [group_id]
+    );
+    
+    if (!communityData.rows || communityData.rows.length === 0) {
+      console.error('❌ Сообщество не найдено в БД:', group_id);
+      return;
+    }
+    
+    const accessToken = communityData.rows[0].access_token;
+    console.log('✅ Токен получен:', accessToken ? 'Да' : 'Нет');
+    
+    if (!accessToken) {
+      console.error('❌ Access token отсутствует для сообщества:', group_id);
+      return;
+    }
     
     // Проверяем, является ли сообщение запросом приза
     if (message.text && message.text.toLowerCase().trim() === 'приз') {
       console.log('🎁 Получен запрос на приз от пользователя:', message.from_id);
-      await handlePrizeRequest(message.from_id);
+      await handlePrizeRequest(message.from_id, accessToken, group_id);
       return;
     }
     
     // Сохраняем сообщение в базу данных
+    console.log('💾 Сохраняем сообщение в БД...');
     const query = `
       INSERT INTO vk_messages (
         vk_message_id, vk_user_id, user_name, message_text, 
@@ -308,7 +356,7 @@ const handleNewMessage = async (message) => {
     const values = [
       message.id,
       message.from_id,
-      'VK User ' + message.from_id, // Позже можно получить реальное имя через VK API
+      'VK User ' + message.from_id,
       message.text || '',
       'message',
       message.peer_id,
@@ -319,14 +367,43 @@ const handleNewMessage = async (message) => {
     const result = await pool.query(query, values);
     if (result.rows.length > 0) {
       console.log('✅ Сообщение VK сохранено в БД');
+    } else {
+      console.log('⚠️ Сообщение уже было в БД (дубликат)');
     }
+    
+    // Проверяем настройки автоответа для сообщества
+    console.log('🔍 Проверяем настройки автоответа для group_id:', group_id);
+    const settingsData = await pool.query(
+      'SELECT auto_reply_enabled, auto_reply_text FROM community_settings WHERE community_id = $1',
+      [group_id]
+    );
+    
+    console.log('📊 Настройки из БД:', settingsData.rows);
+    
+    if (settingsData.rows && settingsData.rows.length > 0) {
+      const settings = settingsData.rows[0];
+      console.log('⚙️ Auto reply enabled:', settings.auto_reply_enabled);
+      console.log('📝 Auto reply text:', settings.auto_reply_text);
+      
+      if (settings.auto_reply_enabled && settings.auto_reply_text) {
+        console.log('✅ Автоответ включен, отправляем сообщение...');
+        await sendMessage(message.from_id, settings.auto_reply_text, accessToken, group_id);
+      } else {
+        console.log('⚠️ Автоответ выключен или текст пустой');
+      }
+    } else {
+      console.log('⚠️ Настройки автоответа не найдены для group_id:', group_id);
+    }
+    
+    console.log('💬 ===== КОНЕЦ ОБРАБОТКИ СООБЩЕНИЯ =====\n');
   } catch (error) {
     console.error('❌ Ошибка сохранения VK сообщения:', error);
+    console.error('Stack:', error.stack);
   }
 };
 
 // Функция обработки запроса приза
-const handlePrizeRequest = async (vkUserId) => {
+const handlePrizeRequest = async (vkUserId, accessToken, groupId) => {
   try {
     console.log('🎁 Обрабатываем запрос приза для пользователя:', vkUserId);
     
@@ -340,7 +417,7 @@ const handlePrizeRequest = async (vkUserId) => {
     
     if (playerResult.rows.length === 0) {
       console.log('❌ Пользователь не имеет права на приз:', vkUserId);
-      await sendMessage(vkUserId, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.');
+      await sendMessage(vkUserId, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, groupId);
       return;
     }
     
@@ -353,7 +430,7 @@ const handlePrizeRequest = async (vkUserId) => {
     });
     
     // Отправляем купон
-    await sendMessage(vkUserId, 'купон');
+    await sendMessage(vkUserId, 'купон', accessToken, groupId);
     
     console.log('🎉 Купон отправлен пользователю:', vkUserId);
     
@@ -363,12 +440,16 @@ const handlePrizeRequest = async (vkUserId) => {
 };
 
 // Функция отправки сообщения пользователю
-const sendMessage = async (vkUserId, messageText) => {
+const sendMessage = async (vkUserId, messageText, accessToken, groupId) => {
   try {
-    const accessToken = process.env.VK_ACCESS_TOKEN;
+    console.log('\n📤 ===== ОТПРАВКА СООБЩЕНИЯ =====');
+    console.log('👤 User ID:', vkUserId);
+    console.log('📝 Текст:', messageText);
+    console.log('🔑 Токен:', accessToken ? 'Присутствует' : 'Отсутствует');
+    console.log('👥 Group ID:', groupId);
     
-    if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
-      console.log('⚠️ VK Access Token не настроен для отправки сообщений');
+    if (!accessToken) {
+      console.error('❌ Access Token отсутствует!');
       return;
     }
     
@@ -384,24 +465,36 @@ const sendMessage = async (vkUserId, messageText) => {
       message: messageText
     };
     
-    console.log('📤 Отправляем сообщение VK:', {
-      user_id: vkUserId,
-      message: messageText,
-      random_id: randomId
+    console.log('🌐 Отправляем запрос к VK API...');
+    console.log('   URL:', vkApiUrl);
+    console.log('   Params:', {
+      v: params.v,
+      user_id: params.user_id,
+      random_id: params.random_id,
+      message: params.message,
+      token: 'скрыт'
     });
     
     const response = await axios.post(vkApiUrl, null, { params });
     
+    console.log('📥 Ответ от VK API:', response.data);
+    
     if (response.data.response) {
-      console.log('✅ Сообщение отправлено успешно:', response.data.response);
+      console.log('✅ Сообщение отправлено успешно! Message ID:', response.data.response);
     } else if (response.data.error) {
-      console.error('❌ Ошибка VK API при отправке сообщения:', response.data.error);
+      console.error('❌ Ошибка VK API при отправке сообщения:');
+      console.error('   Error code:', response.data.error.error_code);
+      console.error('   Error msg:', response.data.error.error_msg);
+      console.error('   Request params:', response.data.error.request_params);
     }
+    
+    console.log('📤 ===== КОНЕЦ ОТПРАВКИ СООБЩЕНИЯ =====\n');
   } catch (error) {
     console.error('❌ Ошибка при отправке сообщения:', error.message);
     if (error.response) {
       console.error('❌ Детали ошибки VK API:', error.response.data);
     }
+    console.error('Stack:', error.stack);
   }
 };
 
@@ -627,15 +720,25 @@ const replyToComment = async (commentData, groupId, playerData = null, isVictory
       return;
     }
     
-    // Используем токен из настроек сообщества или глобальный
-    const accessToken = communitySettings.vk_access_token || process.env.VK_ACCESS_TOKEN;
+    // Получаем токен из user_communities (там хранится access_token после OAuth)
+    const communityData = await pool.query(
+      'SELECT access_token FROM user_communities WHERE community_id = $1',
+      [groupId]
+    );
+    
+    if (!communityData.rows || communityData.rows.length === 0) {
+      console.error('❌ Сообщество не найдено в БД:', groupId);
+      return;
+    }
+    
+    const accessToken = communityData.rows[0].access_token;
     
     console.log('🔑 Проверка VK токенов:', {
       hasAccessToken: !!accessToken,
       accessTokenLength: accessToken ? accessToken.length : 0,
       hasGroupId: !!groupId,
       groupId: groupId,
-      useCommunityToken: !!communitySettings.vk_access_token
+      tokenSource: 'user_communities'
     });
     
     if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
@@ -648,16 +751,10 @@ const replyToComment = async (commentData, groupId, playerData = null, isVictory
       return;
     }
     
-    // Генерируем текст ответа через GPT с использованием ключевого слова из настроек сообщества
+    // Генерируем текст ответа через GPT
     const originalText = commentData.text || '';
-    const autoReplyKeyword = communitySettings.auto_reply_text || 'удачно';
     
-    // Проверяем содержит ли комментарий ключевое слово
-    if (!originalText.toLowerCase().includes(autoReplyKeyword.toLowerCase())) {
-      console.log(`⏭️ Комментарий не содержит ключевое слово "${autoReplyKeyword}", пропускаем ответ`);
-      return;
-    }
-    
+    console.log('🤖 Генерируем ответ на комментарий...');
     const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished);
     
     // Формируем текст ответа с игровой статистикой
@@ -679,9 +776,8 @@ const replyToComment = async (commentData, groupId, playerData = null, isVictory
     console.log('📤 Отправляем ответ на комментарий:', {
       post_id: commentData.post_id,
       reply_to: commentData.id,
-      message: replyText,
-      auto_reply_enabled: autoReplyEnabled,
-      auto_reply_text: autoReplyText
+      message_length: replyText.length,
+      message_preview: replyText.substring(0, 100) + '...'
     });
     
     const response = await axios.post(vkApiUrl, null, { params });
@@ -1404,6 +1500,7 @@ app.post('/api/auth/vk/exchange-code', async (req, res) => {
     console.log('🔧 Настройка Callback API...');
     
     // 1. Получаем confirmation code
+    console.log('1️⃣ Запрашиваем confirmation code у VK API...');
     const confirmRes = await axios.get('https://api.vk.com/method/groups.getCallbackConfirmationCode', {
       params: {
         group_id: communityId,
@@ -1412,58 +1509,77 @@ app.post('/api/auth/vk/exchange-code', async (req, res) => {
       }
     });
     
+    console.log('📥 Ответ от VK API (confirmation code):', JSON.stringify(confirmRes.data, null, 2));
+    
     if (confirmRes.data.error) {
-      console.warn('⚠️  Не удалось получить confirmation code:', confirmRes.data.error.error_msg);
+      console.error('❌ Ошибка получения confirmation code:', confirmRes.data.error);
+      console.error('   Error code:', confirmRes.data.error.error_code);
+      console.error('   Error msg:', confirmRes.data.error.error_msg);
     } else {
       const confirmationCode = confirmRes.data.response.code;
+      console.log('✅ Confirmation code получен:', confirmationCode);
       
       // 2. Генерируем уникальный secret_key для этого сообщества
       const crypto = require('crypto');
       const secretKey = crypto.randomBytes(16).toString('hex');
       console.log('🔐 Сгенерирован secret_key для сообщества');
       
-      // 3. Устанавливаем callback server
+      // 3. Сохраняем confirmation_code СРАЗУ (независимо от callback)
+      console.log('💾 Сохраняем confirmation_code и secret_key в БД...');
+      await setCommunitySettings(communityId, {
+        confirmation_code: confirmationCode,
+        secret_key: secretKey,
+        vk_access_token: access_token
+      });
+      console.log('✅ Confirmation code и secret_key сохранены в БД');
+      
+      // 4. Пытаемся установить callback server (опционально)
       const callbackUrl = process.env.CALLBACK_URL || 'https://testbot-api.loca.lt/vk/callback';
       
-      const serverRes = await axios.post('https://api.vk.com/method/groups.setCallbackServer', null, {
-        params: {
-          group_id: communityId,
-          url: callbackUrl,
-          title: 'Main Server',
-          secret_key: secretKey,
-          access_token: access_token,
-          v: '5.199'
-        }
-      });
-      
-      if (serverRes.data.error) {
-        console.warn('⚠️  Не удалось установить callback server:', serverRes.data.error.error_msg);
-      } else {
-        // 3. Настраиваем типы событий
-        await axios.post('https://api.vk.com/method/groups.setCallbackSettings', null, {
+      try {
+        const serverRes = await axios.post('https://api.vk.com/method/groups.setCallbackServer', null, {
           params: {
             group_id: communityId,
-            api_version: '5.199',
-            message_new: 1,
-            wall_reply_new: 1,
-            wall_post_new: 1,
-            like_add: 1,
-            like_remove: 1,
+            url: callbackUrl,
+            title: 'Main Server',
+            secret_key: secretKey,
             access_token: access_token,
             v: '5.199'
           }
         });
         
-        // 4. Сохраняем настройки в community_settings
-        await setCommunitySettings(communityId, {
-          confirmation_code: confirmationCode,
-          secret_key: secretKey,
-          callback_configured: true,
-          callback_url: callbackUrl,
-          vk_access_token: access_token
-        });
-        
-        console.log('✅ Callback API настроен успешно!');
+        if (serverRes.data.error) {
+          console.warn('⚠️  Не удалось установить callback server:', serverRes.data.error.error_msg);
+          console.warn('   Вы можете настроить его вручную в VK');
+        } else {
+          console.log('✅ Callback server установлен');
+          
+          // 5. Настраиваем типы событий
+          await axios.post('https://api.vk.com/method/groups.setCallbackSettings', null, {
+            params: {
+              group_id: communityId,
+              api_version: '5.199',
+              message_new: 1,
+              wall_reply_new: 1,
+              wall_post_new: 1,
+              like_add: 1,
+              like_remove: 1,
+              access_token: access_token,
+              v: '5.199'
+            }
+          });
+          
+          // 6. Обновляем статус в БД
+          await setCommunitySettings(communityId, {
+            callback_configured: true,
+            callback_url: callbackUrl
+          });
+          
+          console.log('✅ Callback API настроен полностью!');
+        }
+      } catch (callbackError) {
+        console.error('⚠️  Ошибка настройки Callback API:', callbackError.message);
+        console.log('   Confirmation code сохранён, Callback можно настроить позже');
       }
     }
     
@@ -1605,15 +1721,34 @@ app.post('/api/communities/:communityId/setup-callback', async (req, res) => {
 // Получить настройки конкретного сообщества
 app.get('/api/communities/:communityId/settings', async (req, res) => {
   try {
-    const communityId = parseInt(req.params.communityId);
-    const settings = await getCommunitySettings(communityId);
+    console.log('📥 GET /api/communities/:communityId/settings');
+    console.log('   Community ID (raw):', req.params.communityId);
     
-    res.json({
+    const communityId = parseInt(req.params.communityId);
+    console.log('   Community ID (parsed):', communityId);
+    
+    if (isNaN(communityId)) {
+      console.log('❌ Неверный формат ID');
+      return res.status(400).json({
+        success: false,
+        message: 'Неверный формат ID сообщества'
+      });
+    }
+    
+    const settings = await getCommunitySettings(communityId);
+    console.log('   Настройки из БД:', settings);
+    
+    const response = {
       success: true,
-      data: settings
-    });
+      data: settings || null
+    };
+    
+    console.log('✅ Отправляю ответ:', JSON.stringify(response, null, 2));
+    res.json(response);
+    console.log('✅ Ответ отправлен успешно!');
   } catch (error) {
-    console.error('Ошибка при получении настроек сообщества:', error);
+    console.error('❌ Ошибка при получении настроек сообщества:', error);
+    console.error('   Stack:', error.stack);
     res.status(500).json({
       success: false,
       message: 'Ошибка при получении настроек сообщества'
