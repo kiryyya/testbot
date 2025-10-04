@@ -24,7 +24,14 @@ const {
   createPostEvent,
   updatePostPlayerStats,
   getPostTopPlayers,
-  getPostEvents
+  getPostEvents,
+  // Функции для работы с настройками сообществ
+  getCommunitySettings,
+  setCommunitySettings,
+  // Функции для работы с сообществами пользователей
+  addUserCommunity,
+  getUserCommunities,
+  removeUserCommunity
 } = require('./database');
 
 const app = express();
@@ -197,25 +204,43 @@ app.delete('/api/data/:id', async (req, res) => {
 // Обработчик VK Callback API
 app.post('/vk/callback', async (req, res) => {
   try {
-    const { type, object, secret } = req.body;
+    const { type, object, secret, group_id } = req.body;
     
     console.log('📥 VK Callback получен:', { 
-      type, 
+      type,
+      group_id,
       object: object ? 'есть данные' : 'нет данных',
       headers: req.headers,
       body: req.body
     });
     
-    // Проверка секретного ключа (временно отключена для настройки)
-    // if (process.env.VK_SECRET_KEY && process.env.VK_SECRET_KEY !== 'your_secret_key' && secret !== process.env.VK_SECRET_KEY) {
-    //   console.log('❌ Неверный секретный ключ VK');
-    //   return res.status(403).send('Forbidden');
-    // }
-    console.log('🔑 Секретный ключ в запросе:', secret);
+    // Проверка секретного ключа из БД (для каждого сообщества свой)
+    if (group_id && secret) {
+      const communitySettings = await getCommunitySettings(group_id);
+      if (communitySettings && communitySettings.secret_key) {
+        if (secret !== communitySettings.secret_key) {
+          console.log('❌ Неверный секретный ключ VK для группы', group_id);
+          return res.status(403).send('Forbidden');
+        }
+        console.log('✅ Секретный ключ проверен для группы', group_id);
+      }
+    }
     
     // Обработка подтверждения сервера
     if (type === 'confirmation') {
-      console.log('🔐 Запрос подтверждения VK сервера');
+      console.log('🔐 Запрос подтверждения VK сервера для группы:', group_id);
+      
+      // Получаем confirmation code из настроек сообщества
+      if (group_id) {
+        const communitySettings = await getCommunitySettings(group_id);
+        if (communitySettings && communitySettings.confirmation_code) {
+          console.log('✅ Отправляем confirmation code из БД');
+          return res.send(communitySettings.confirmation_code);
+        }
+      }
+      
+      // Fallback на глобальный код (если есть)
+      console.log('⚠️ Используем глобальный confirmation code из .env');
       return res.send(process.env.VK_CONFIRMATION_CODE || 'your_confirmation_code');
     }
     
@@ -227,7 +252,7 @@ app.post('/vk/callback', async (req, res) => {
     // Обработка комментариев к постам
     if (type === 'wall_reply_new') {
       console.log('🔄 Получен wall_reply_new, обрабатываем комментарий...');
-      await handleWallComment(object);
+      await handleWallComment(object, group_id);
     }
     
     // Обработка лайков на посты
@@ -381,18 +406,18 @@ const sendMessage = async (vkUserId, messageText) => {
 };
 
 // Функция обработки комментариев к постам
-const handleWallComment = async (commentData) => {
+const handleWallComment = async (commentData, groupId) => {
   try {
     console.log('💭 Обработка комментария VK:', {
       comment_id: commentData.id,
       from: commentData.from_id,
       text: commentData.text,
       post_id: commentData.post_id,
-      timestamp: commentData.date
+      timestamp: commentData.date,
+      group_id: groupId
     });
     
     // Проверяем, не наш ли это бот (не отвечаем на собственные комментарии)
-    const groupId = process.env.VK_GROUP_ID;
     if (groupId && commentData.from_id === -parseInt(groupId)) {
       console.log('🤖 Пропускаем собственный комментарий бота');
       return;
@@ -404,7 +429,7 @@ const handleWallComment = async (commentData) => {
     if (!postGameSettings || !postGameSettings.game_enabled) {
       console.log('🎮 Игра отключена для этого поста, отправляем обычный автоответ');
       // Отправляем обычный автоответ без игровой логики
-      await replyToComment(commentData, null, false, 0, false);
+      await replyToComment(commentData, groupId, null, false, 0, false);
       return;
     }
     
@@ -437,7 +462,7 @@ const handleWallComment = async (commentData) => {
       console.log('🚫 У игрока закончились попытки для этого поста, отправляем уведомление');
       
       // Отправляем сообщение о том, что попытки закончились
-      await replyToComment(commentData, player, false, 0, true); // true = attempts_finished
+      await replyToComment(commentData, groupId, player, false, 0, true); // true = attempts_finished
       return;
     }
     
@@ -484,7 +509,7 @@ const handleWallComment = async (commentData) => {
         const isVictory = checkVictoryConditions(updatedPlayer);
         
         // 7. Автоматически отвечаем на комментарий
-        await replyToComment(commentData, updatedPlayer, isVictory, livesToLose, false); // false = attempts_finished
+        await replyToComment(commentData, groupId, updatedPlayer, isVictory, livesToLose, false); // false = attempts_finished
       }
     } else {
       console.log('⚠️ Событие поста уже существует, пропускаем обработку (защита от дублей)');
@@ -576,52 +601,63 @@ const generateReplyText = async (originalText, playerData = null, isVictory = fa
 };
 
 // Функция для ответа на комментарий
-const replyToComment = async (commentData, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
+const replyToComment = async (commentData, groupId, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
   try {
     console.log('📤 Начинаем отправку ответа на комментарий:', {
       comment_id: commentData.id,
       user_id: commentData.from_id,
+      group_id: groupId,
       is_victory: isVictory,
       lives_lost: livesLost,
       attempts_finished: attemptsFinished
     });
     
-    // Проверяем, включены ли автоответы
-    const autoReplyEnabled = await getSetting('auto_reply_enabled');
+    // Получаем настройки для конкретного сообщества
+    const communitySettings = await getCommunitySettings(groupId);
     
-    console.log('🔍 Проверка настроек автоответов:', {
-      autoReplyEnabled,
-      type: typeof autoReplyEnabled,
-      isEnabled: autoReplyEnabled === true
+    console.log('🔍 Проверка настроек сообщества:', {
+      community_id: groupId,
+      auto_reply_enabled: communitySettings.auto_reply_enabled,
+      auto_reply_text: communitySettings.auto_reply_text,
+      game_enabled: communitySettings.game_enabled
     });
     
-    if (autoReplyEnabled !== true) {
-      console.log('🔇 Автоответы отключены, пропускаем ответ на комментарий. Значение:', autoReplyEnabled);
+    if (communitySettings.auto_reply_enabled !== true) {
+      console.log('🔇 Автоответы отключены для этого сообщества, пропускаем ответ на комментарий');
       return;
     }
     
-    const accessToken = process.env.VK_ACCESS_TOKEN;
-    const groupId = process.env.VK_GROUP_ID;
+    // Используем токен из настроек сообщества или глобальный
+    const accessToken = communitySettings.vk_access_token || process.env.VK_ACCESS_TOKEN;
     
     console.log('🔑 Проверка VK токенов:', {
       hasAccessToken: !!accessToken,
       accessTokenLength: accessToken ? accessToken.length : 0,
       hasGroupId: !!groupId,
-      groupId: groupId
+      groupId: groupId,
+      useCommunityToken: !!communitySettings.vk_access_token
     });
     
     if (!accessToken || accessToken === 'vk1.a.your_actual_access_token_here') {
-      console.log('⚠️ VK Access Token не настроен');
+      console.log('⚠️ VK Access Token не настроен ни для сообщества, ни глобально');
       return;
     }
     
-    if (!groupId || groupId === 'your_group_id') {
-      console.log('⚠️ VK Group ID не настроен');
+    if (!groupId) {
+      console.log('⚠️ VK Group ID не найден в запросе');
       return;
     }
     
-    // Генерируем текст ответа через GPT
+    // Генерируем текст ответа через GPT с использованием ключевого слова из настроек сообщества
     const originalText = commentData.text || '';
+    const autoReplyKeyword = communitySettings.auto_reply_text || 'удачно';
+    
+    // Проверяем содержит ли комментарий ключевое слово
+    if (!originalText.toLowerCase().includes(autoReplyKeyword.toLowerCase())) {
+      console.log(`⏭️ Комментарий не содержит ключевое слово "${autoReplyKeyword}", пропускаем ответ`);
+      return;
+    }
+    
     const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished);
     
     // Формируем текст ответа с игровой статистикой
@@ -1202,6 +1238,458 @@ app.post('/api/admin/settings', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при сохранении настроек'
+    });
+  }
+});
+
+// ===== API ДЛЯ ПОЛУЧЕНИЯ КОНФИГУРАЦИИ =====
+
+// Получить конфигурацию VK OAuth
+app.get('/api/vk/config', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      data: {
+        appId: process.env.VK_APP_ID,
+        redirectUri: process.env.VK_REDIRECT_URI
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка при получении конфигурации VK:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении конфигурации'
+    });
+  }
+});
+
+// ===== API ЭНДПОИНТЫ ДЛЯ РАБОТЫ С СООБЩЕСТВАМИ ПОЛЬЗОВАТЕЛЕЙ =====
+
+// Получить все добавленные сообщества пользователя
+app.get('/api/user/:userId/communities', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    console.log('📥 GET /api/user/:userId/communities');
+    console.log('👤 User ID:', userId);
+    
+    const communities = await getUserCommunities(userId);
+    
+    console.log('📊 Найдено сообществ:', communities.length);
+    console.log('📋 Данные сообществ:', JSON.stringify(communities, null, 2));
+    
+    res.json({
+      success: true,
+      data: communities
+    });
+  } catch (error) {
+    console.error('❌ Ошибка при получении сообществ пользователя:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении сообществ'
+    });
+  }
+});
+
+// Удалить сообщество пользователя
+app.delete('/api/user/:userId/communities/:communityId', async (req, res) => {
+  try {
+    const { userId, communityId } = req.params;
+    
+    await removeUserCommunity(userId, parseInt(communityId));
+    
+    res.json({
+      success: true,
+      message: 'Сообщество удалено'
+    });
+  } catch (error) {
+    console.error('Ошибка при удалении сообщества:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при удалении сообщества'
+    });
+  }
+});
+
+// OAuth: Обмен code на access_token и добавление сообщества
+app.post('/api/auth/vk/exchange-code', async (req, res) => {
+  try {
+    const { code, userId, communityId } = req.body;
+    
+    if (!code) {
+      return res.status(400).json({
+        success: false,
+        message: 'Требуется параметр code'
+      });
+    }
+    
+    console.log('🔄 Обмен OAuth code на access_token...');
+    console.log('Code:', code.substring(0, 20) + '...');
+    console.log('User ID:', userId);
+    console.log('Community ID:', communityId);
+    
+    // Обмениваем code на access_token
+    const tokenResponse = await axios.get('https://oauth.vk.com/access_token', {
+      params: {
+        client_id: process.env.VK_APP_ID,
+        client_secret: process.env.VK_APP_SECRET,
+        redirect_uri: process.env.VK_REDIRECT_URI,
+        code: code
+      }
+    });
+    
+    console.log('✅ Ответ от VK API:', tokenResponse.data);
+    
+    const responseData = tokenResponse.data;
+    let access_token = null;
+    
+    // VK возвращает токены для групп в разных форматах:
+    // 1. В массиве groups (когда используется group_ids)
+    // 2. В поле access_token_<group_id>
+    // 3. В корне access_token (для пользовательских токенов)
+    
+    if (responseData.groups && responseData.groups.length > 0) {
+      // Формат с group_ids
+      access_token = responseData.groups[0].access_token;
+      console.log('✅ Токен найден в groups[0].access_token');
+    } else if (responseData[`access_token_${communityId}`]) {
+      // Альтернативный формат
+      access_token = responseData[`access_token_${communityId}`];
+      console.log(`✅ Токен найден в access_token_${communityId}`);
+    } else if (responseData.access_token) {
+      // Стандартный формат (для пользовательских токенов)
+      access_token = responseData.access_token;
+      console.log('✅ Токен найден в корне ответа');
+    }
+    
+    // Проверяем, что токен получен
+    if (!access_token) {
+      console.error('❌ access_token не найден ни в одном из форматов!');
+      console.error('Полный ответ:', JSON.stringify(responseData, null, 2));
+      throw new Error('VK не вернул access_token. Проверьте настройки приложения.');
+    }
+    
+    console.log('✅ Токен получен:', access_token.substring(0, 20) + '...');
+    console.log('Токен истекает через:', responseData.expires_in || 'бессрочно');
+    
+    // Получаем информацию о выбранном сообществе
+    console.log('📊 Получаем информацию о сообществе...');
+    const groupInfoResponse = await axios.get('https://api.vk.com/method/groups.getById', {
+      params: {
+        group_id: communityId,
+        access_token: access_token,
+        v: '5.199'
+      }
+    });
+    
+    if (groupInfoResponse.data.error) {
+      throw new Error(`VK API Error: ${groupInfoResponse.data.error.error_msg}`);
+    }
+    
+    const groupInfo = groupInfoResponse.data.response.groups?.[0] || groupInfoResponse.data.response[0];
+    console.log('✅ Информация о сообществе получена:', groupInfo.name);
+    
+    // Добавляем сообщество для пользователя
+    await addUserCommunity(
+      userId,
+      communityId,
+      groupInfo.name,
+      groupInfo.photo_200 || groupInfo.photo_100,
+      access_token
+    );
+    
+    console.log('✅ Сообщество добавлено для пользователя');
+    
+    // Автоматически настраиваем Callback API
+    console.log('🔧 Настройка Callback API...');
+    
+    // 1. Получаем confirmation code
+    const confirmRes = await axios.get('https://api.vk.com/method/groups.getCallbackConfirmationCode', {
+      params: {
+        group_id: communityId,
+        access_token: access_token,
+        v: '5.199'
+      }
+    });
+    
+    if (confirmRes.data.error) {
+      console.warn('⚠️  Не удалось получить confirmation code:', confirmRes.data.error.error_msg);
+    } else {
+      const confirmationCode = confirmRes.data.response.code;
+      
+      // 2. Генерируем уникальный secret_key для этого сообщества
+      const crypto = require('crypto');
+      const secretKey = crypto.randomBytes(16).toString('hex');
+      console.log('🔐 Сгенерирован secret_key для сообщества');
+      
+      // 3. Устанавливаем callback server
+      const callbackUrl = process.env.CALLBACK_URL || 'https://testbot-api.loca.lt/vk/callback';
+      
+      const serverRes = await axios.post('https://api.vk.com/method/groups.setCallbackServer', null, {
+        params: {
+          group_id: communityId,
+          url: callbackUrl,
+          title: 'Main Server',
+          secret_key: secretKey,
+          access_token: access_token,
+          v: '5.199'
+        }
+      });
+      
+      if (serverRes.data.error) {
+        console.warn('⚠️  Не удалось установить callback server:', serverRes.data.error.error_msg);
+      } else {
+        // 3. Настраиваем типы событий
+        await axios.post('https://api.vk.com/method/groups.setCallbackSettings', null, {
+          params: {
+            group_id: communityId,
+            api_version: '5.199',
+            message_new: 1,
+            wall_reply_new: 1,
+            wall_post_new: 1,
+            like_add: 1,
+            like_remove: 1,
+            access_token: access_token,
+            v: '5.199'
+          }
+        });
+        
+        // 4. Сохраняем настройки в community_settings
+        await setCommunitySettings(communityId, {
+          confirmation_code: confirmationCode,
+          secret_key: secretKey,
+          callback_configured: true,
+          callback_url: callbackUrl,
+          vk_access_token: access_token
+        });
+        
+        console.log('✅ Callback API настроен успешно!');
+      }
+    }
+    
+    res.json({
+      success: true,
+      message: 'Сообщество успешно добавлено и настроено!',
+      data: {
+        communityId,
+        communityName: groupInfo.name
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка при обмене code на token:', error);
+    res.status(500).json({
+      success: false,
+      message: error.response?.data?.error_description || error.message || 'Ошибка OAuth авторизации',
+      details: error.response?.data
+    });
+  }
+});
+
+// ===== API ЭНДПОИНТЫ ДЛЯ НАСТРОЕК СООБЩЕСТВ =====
+
+// Автоматическая настройка Callback API для сообщества
+app.post('/api/communities/:communityId/setup-callback', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    const { userAccessToken } = req.body;
+    
+    if (!userAccessToken) {
+      return res.status(400).json({
+        success: false,
+        message: 'Требуется access token пользователя'
+      });
+    }
+    
+    console.log('🔧 Начинаем автонастройку Callback API для сообщества:', communityId);
+    
+    // 1. Получаем confirmation code
+    console.log('1️⃣ Получаем confirmation code...');
+    const confirmRes = await axios.get('https://api.vk.com/method/groups.getCallbackConfirmationCode', {
+      params: {
+        group_id: communityId,
+        access_token: userAccessToken,
+        v: '5.199'
+      }
+    });
+    
+    if (confirmRes.data.error) {
+      throw new Error(`VK API Error: ${confirmRes.data.error.error_msg}`);
+    }
+    
+    const confirmationCode = confirmRes.data.response.code;
+    console.log('✅ Confirmation code получен:', confirmationCode);
+    
+    // 2. Генерируем уникальный secret_key для этого сообщества
+    const crypto = require('crypto');
+    const secretKey = crypto.randomBytes(16).toString('hex');
+    console.log('🔐 Сгенерирован secret_key для сообщества');
+    
+    // 3. Устанавливаем callback server URL
+    console.log('2️⃣ Устанавливаем callback server...');
+    const callbackUrl = process.env.CALLBACK_URL || 'https://testbot-api.loca.lt/vk/callback';
+    
+    const serverRes = await axios.post('https://api.vk.com/method/groups.setCallbackServer', null, {
+      params: {
+        group_id: communityId,
+        url: callbackUrl,
+        title: 'Main Server',
+        secret_key: secretKey,
+        access_token: userAccessToken,
+        v: '5.199'
+      }
+    });
+    
+    if (serverRes.data.error) {
+      throw new Error(`VK API Error: ${serverRes.data.error.error_msg}`);
+    }
+    
+    console.log('✅ Callback server установлен');
+    
+    // 3. Настраиваем типы событий
+    console.log('3️⃣ Настраиваем типы событий...');
+    const settingsRes = await axios.post('https://api.vk.com/method/groups.setCallbackSettings', null, {
+      params: {
+        group_id: communityId,
+        api_version: '5.199',
+        message_new: 1,
+        wall_reply_new: 1,
+        wall_post_new: 1,
+        like_add: 1,
+        like_remove: 1,
+        access_token: userAccessToken,
+        v: '5.199'
+      }
+    });
+    
+    if (settingsRes.data.error) {
+      throw new Error(`VK API Error: ${settingsRes.data.error.error_msg}`);
+    }
+    
+    console.log('✅ Типы событий настроены');
+    
+    // 4. Сохраняем настройки в БД
+    console.log('4️⃣ Сохраняем настройки в БД...');
+    const currentSettings = await getCommunitySettings(communityId);
+    
+    await setCommunitySettings(communityId, {
+      ...currentSettings,
+      confirmation_code: confirmationCode,
+      secret_key: secretKey,
+      callback_configured: true,
+      callback_url: callbackUrl
+    });
+    
+    console.log('✅ Callback API успешно настроен!');
+    
+    res.json({
+      success: true,
+      message: 'Callback API успешно настроен!',
+      data: {
+        confirmationCode,
+        callbackUrl,
+        eventsConfigured: ['message_new', 'wall_reply_new', 'wall_post_new', 'like_add', 'like_remove']
+      }
+    });
+    
+  } catch (error) {
+    console.error('❌ Ошибка настройки Callback API:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Ошибка настройки Callback API',
+      details: error.response?.data
+    });
+  }
+});
+
+// Получить настройки конкретного сообщества
+app.get('/api/communities/:communityId/settings', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    const settings = await getCommunitySettings(communityId);
+    
+    res.json({
+      success: true,
+      data: settings
+    });
+  } catch (error) {
+    console.error('Ошибка при получении настроек сообщества:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при получении настроек сообщества'
+    });
+  }
+});
+
+// Обновить настройки сообщества
+app.post('/api/communities/:communityId/settings', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    const { 
+      autoReplyEnabled, 
+      autoReplyText, 
+      gameEnabled, 
+      defaultAttempts, 
+      defaultLives,
+      vkAccessToken
+    } = req.body;
+    
+    // Валидация
+    if (autoReplyEnabled !== undefined && typeof autoReplyEnabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'autoReplyEnabled должно быть boolean'
+      });
+    }
+    
+    if (autoReplyText !== undefined && (typeof autoReplyText !== 'string' || autoReplyText.trim().length === 0)) {
+      return res.status(400).json({
+        success: false,
+        message: 'autoReplyText должно быть непустой строкой'
+      });
+    }
+    
+    if (gameEnabled !== undefined && typeof gameEnabled !== 'boolean') {
+      return res.status(400).json({
+        success: false,
+        message: 'gameEnabled должно быть boolean'
+      });
+    }
+    
+    if (defaultAttempts !== undefined && (typeof defaultAttempts !== 'number' || defaultAttempts < 1 || defaultAttempts > 20)) {
+      return res.status(400).json({
+        success: false,
+        message: 'defaultAttempts должно быть числом от 1 до 20'
+      });
+    }
+    
+    if (defaultLives !== undefined && (typeof defaultLives !== 'number' || defaultLives < 1 || defaultLives > 1000)) {
+      return res.status(400).json({
+        success: false,
+        message: 'defaultLives должно быть числом от 1 до 1000'
+      });
+    }
+    
+    // Сохраняем настройки
+    const settings = await setCommunitySettings(communityId, {
+      auto_reply_enabled: autoReplyEnabled,
+      auto_reply_text: autoReplyText,
+      game_enabled: gameEnabled,
+      default_attempts: defaultAttempts,
+      default_lives: defaultLives,
+      vk_access_token: vkAccessToken
+    });
+    
+    res.json({
+      success: true,
+      message: 'Настройки сообщества успешно сохранены',
+      data: settings
+    });
+  } catch (error) {
+    console.error('Ошибка при сохранении настроек сообщества:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка при сохранении настроек сообщества'
     });
   }
 });

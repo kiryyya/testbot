@@ -129,6 +129,68 @@ const createTable = async () => {
     await pool.query(adminSettingsQuery);
     console.log('✅ Таблица admin_settings создана или уже существует');
 
+    // Таблица настроек для каждого сообщества
+    const communitySettingsQuery = `
+      CREATE TABLE IF NOT EXISTS community_settings (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        community_id BIGINT NOT NULL UNIQUE,
+        auto_reply_enabled BOOLEAN DEFAULT true,
+        auto_reply_text TEXT DEFAULT 'удачно',
+        game_enabled BOOLEAN DEFAULT true,
+        default_attempts INTEGER DEFAULT 5,
+        default_lives INTEGER DEFAULT 100,
+        vk_access_token TEXT,
+        confirmation_code VARCHAR(255),
+        secret_key VARCHAR(255),
+        callback_configured BOOLEAN DEFAULT false,
+        callback_url TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+    `;
+    
+    // Добавляем колонку secret_key если её нет (миграция для существующих таблиц)
+    const addSecretKeyColumn = `
+      DO $$ 
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name = 'community_settings' AND column_name = 'secret_key'
+        ) THEN
+          ALTER TABLE community_settings ADD COLUMN secret_key VARCHAR(255);
+        END IF;
+      END $$;
+    `;
+
+    await pool.query(communitySettingsQuery);
+    console.log('✅ Таблица community_settings создана или уже существует');
+    
+    await pool.query(addSecretKeyColumn);
+    console.log('✅ Миграция: колонка secret_key добавлена (если отсутствовала)');
+
+    // Таблица для связи пользователей и их добавленных сообществ
+    const userCommunitiesQuery = `
+      CREATE TABLE IF NOT EXISTS user_communities (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(255) NOT NULL,
+        community_id BIGINT NOT NULL,
+        community_name VARCHAR(500),
+        community_photo VARCHAR(500),
+        access_token TEXT,
+        added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(user_id, community_id)
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_user_communities_user_id 
+      ON user_communities(user_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_user_communities_community_id 
+      ON user_communities(community_id);
+    `;
+    
+    await pool.query(userCommunitiesQuery);
+    console.log('✅ Таблица user_communities создана или уже существует');
+
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
 
@@ -593,6 +655,224 @@ const getPostEvents = async (postId, limit = 50) => {
   }
 };
 
+// ==========================================
+// Функции для работы с настройками сообществ
+// ==========================================
+
+/**
+ * Получить настройки конкретного сообщества
+ */
+const getCommunitySettings = async (communityId) => {
+  try {
+    const query = `
+      SELECT * FROM community_settings 
+      WHERE community_id = $1
+    `;
+    
+    const result = await pool.query(query, [communityId]);
+    
+    if (result.rows.length === 0) {
+      // Возвращаем дефолтные настройки если нет записи
+      return {
+        community_id: communityId,
+        auto_reply_enabled: true,
+        auto_reply_text: 'удачно',
+        game_enabled: true,
+        default_attempts: 5,
+        default_lives: 100,
+        vk_access_token: null
+      };
+    }
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при получении настроек сообщества:', error);
+    throw error;
+  }
+};
+
+/**
+ * Создать или обновить настройки сообщества
+ */
+const setCommunitySettings = async (communityId, settings) => {
+  try {
+    const {
+      auto_reply_enabled,
+      auto_reply_text,
+      game_enabled,
+      default_attempts,
+      default_lives,
+      vk_access_token,
+      confirmation_code,
+      secret_key,
+      callback_configured,
+      callback_url
+    } = settings;
+
+    const query = `
+      INSERT INTO community_settings (
+        community_id, 
+        auto_reply_enabled, 
+        auto_reply_text, 
+        game_enabled, 
+        default_attempts, 
+        default_lives,
+        vk_access_token,
+        confirmation_code,
+        secret_key,
+        callback_configured,
+        callback_url,
+        updated_at
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      ON CONFLICT (community_id) 
+      DO UPDATE SET
+        auto_reply_enabled = COALESCE(EXCLUDED.auto_reply_enabled, community_settings.auto_reply_enabled),
+        auto_reply_text = COALESCE(EXCLUDED.auto_reply_text, community_settings.auto_reply_text),
+        game_enabled = COALESCE(EXCLUDED.game_enabled, community_settings.game_enabled),
+        default_attempts = COALESCE(EXCLUDED.default_attempts, community_settings.default_attempts),
+        default_lives = COALESCE(EXCLUDED.default_lives, community_settings.default_lives),
+        vk_access_token = COALESCE(EXCLUDED.vk_access_token, community_settings.vk_access_token),
+        confirmation_code = COALESCE(EXCLUDED.confirmation_code, community_settings.confirmation_code),
+        secret_key = COALESCE(EXCLUDED.secret_key, community_settings.secret_key),
+        callback_configured = COALESCE(EXCLUDED.callback_configured, community_settings.callback_configured),
+        callback_url = COALESCE(EXCLUDED.callback_url, community_settings.callback_url),
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [
+      communityId,
+      auto_reply_enabled,
+      auto_reply_text,
+      game_enabled,
+      default_attempts,
+      default_lives,
+      vk_access_token,
+      confirmation_code,
+      secret_key,
+      callback_configured,
+      callback_url
+    ]);
+
+    console.log('✅ Настройки сообщества обновлены:', {
+      community_id: communityId,
+      ...settings
+    });
+
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при сохранении настроек сообщества:', error);
+    throw error;
+  }
+};
+
+/**
+ * Добавить сообщество для пользователя
+ */
+const addUserCommunity = async (userId, communityId, communityName, communityPhoto, accessToken) => {
+  try {
+    console.log('💾 addUserCommunity вызван:');
+    console.log('   userId:', userId, 'тип:', typeof userId);
+    console.log('   communityId:', communityId, 'тип:', typeof communityId);
+    console.log('   communityName:', communityName);
+    console.log('   communityPhoto:', communityPhoto);
+    console.log('   accessToken:', accessToken ? accessToken.substring(0, 20) + '...' : 'null');
+    
+    const query = `
+      INSERT INTO user_communities (
+        user_id,
+        community_id,
+        community_name,
+        community_photo,
+        access_token
+      ) VALUES ($1, $2, $3, $4, $5)
+      ON CONFLICT (user_id, community_id)
+      DO UPDATE SET
+        community_name = EXCLUDED.community_name,
+        community_photo = EXCLUDED.community_photo,
+        access_token = EXCLUDED.access_token
+      RETURNING *
+    `;
+    
+    const params = [
+      userId,
+      communityId,
+      communityName,
+      communityPhoto,
+      accessToken
+    ];
+    
+    console.log('   SQL параметры:', params);
+    
+    const result = await pool.query(query, params);
+    
+    console.log('✅ Сообщество добавлено для пользователя:', {
+      user_id: userId,
+      community_id: communityId,
+      result: result.rows[0]
+    });
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при добавлении сообщества для пользователя:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить все сообщества пользователя
+ */
+const getUserCommunities = async (userId) => {
+  try {
+    console.log('🔍 getUserCommunities вызван');
+    console.log('   userId:', userId, 'тип:', typeof userId);
+    
+    const query = `
+      SELECT * FROM user_communities
+      WHERE user_id = $1
+      ORDER BY added_at DESC
+    `;
+    
+    console.log('   SQL запрос:', query);
+    console.log('   Параметры:', [userId]);
+    
+    const result = await pool.query(query, [userId]);
+    
+    console.log('   Результат из БД:', result.rows.length, 'строк');
+    console.log('   Данные:', JSON.stringify(result.rows, null, 2));
+    
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка при получении сообществ пользователя:', error);
+    throw error;
+  }
+};
+
+/**
+ * Удалить сообщество пользователя
+ */
+const removeUserCommunity = async (userId, communityId) => {
+  try {
+    const query = `
+      DELETE FROM user_communities
+      WHERE user_id = $1 AND community_id = $2
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [userId, communityId]);
+    
+    console.log('✅ Сообщество удалено для пользователя:', {
+      user_id: userId,
+      community_id: communityId
+    });
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при удалении сообщества пользователя:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -611,5 +891,12 @@ module.exports = {
   createPostEvent,
   updatePostPlayerStats,
   getPostTopPlayers,
-  getPostEvents
+  getPostEvents,
+  // Функции для работы с настройками сообществ
+  getCommunitySettings,
+  setCommunitySettings,
+  // Функции для работы с сообществами пользователей
+  addUserCommunity,
+  getUserCommunities,
+  removeUserCommunity
 };
