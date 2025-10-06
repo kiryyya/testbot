@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { useLocation } from 'react-router-dom';
 import { useAppSelector } from '../store';
 import { selectAuth } from '../store/authSlice';
@@ -39,7 +40,7 @@ const CommunitiesPage: React.FC = () => {
       setLoading(true);
       setError(null);
       
-      const url = `http://localhost:5001/api/user/${userId}/communities`;
+      const url = `${API_BASE_URL}/user/${userId}/communities`;
       console.log('🔗 URL запроса:', url);
       
       const response = await fetch(url);
@@ -117,7 +118,7 @@ const CommunitiesPage: React.FC = () => {
     if (!window.confirm('Удалить это сообщество из списка?')) return;
     
     try {
-      const response = await fetch(`http://localhost:5001/api/user/${userId}/communities/${communityId}`, {
+      const response = await fetch(`${API_BASE_URL}/user/${userId}/communities/${communityId}`, {
         method: 'DELETE'
       });
       

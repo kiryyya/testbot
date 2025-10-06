@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import './AdminPanel.css';
 
 interface AdminSettings {
@@ -23,7 +24,7 @@ const AdminPanel: React.FC = () => {
   // Загрузить настройки
   const loadSettings = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/admin/settings');
+      const response = await fetch('${API_BASE_URL}/admin/settings');
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.settings) {
@@ -39,7 +40,7 @@ const AdminPanel: React.FC = () => {
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/admin/settings', {
+      const response = await fetch('${API_BASE_URL}/admin/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -69,7 +70,7 @@ const AdminPanel: React.FC = () => {
     // Автоматически сохраняем при переключении
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5001/api/admin/settings', {
+      const response = await fetch('${API_BASE_URL}/admin/settings', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

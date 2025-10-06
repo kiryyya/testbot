@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { API_BASE_URL } from '../config';
 import { useNavigate } from 'react-router-dom';
 import { useAppSelector } from '../store';
 import { selectAuth } from '../store/authSlice';
@@ -66,7 +67,7 @@ const VKAuthCallbackPage: React.FC = () => {
           communityId: parseInt(communityId)
         });
         
-        const response = await fetch('http://localhost:5001/api/auth/vk/exchange-code', {
+        const response = await fetch('${API_BASE_URL}/auth/vk/exchange-code', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

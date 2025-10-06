@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import './CommunitySettings.css';
 
 interface CommunitySettingsProps {
@@ -36,7 +37,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
   // Загрузить настройки
   const loadSettings = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/communities/${communityId}/settings`);
+      const response = await fetch(`${API_BASE_URL}/communities/${communityId}/settings`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -60,7 +61,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
   const saveSettings = async () => {
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/communities/${communityId}/settings`, {
+      const response = await fetch(`${API_BASE_URL}/communities/${communityId}/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +90,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
     
     setLoading(true);
     try {
-      const response = await fetch(`http://localhost:5001/api/communities/${communityId}/settings`, {
+      const response = await fetch(`${API_BASE_URL}/communities/${communityId}/settings`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { useAppSelector } from '../store';
 import { selectAuth } from '../store/authSlice';
 import './CallbackSetup.css';
@@ -29,7 +30,7 @@ const CallbackSetup: React.FC<CallbackSetupProps> = ({ communityId }) => {
 
   const loadCallbackStatus = async () => {
     try {
-      const response = await fetch(`http://localhost:5001/api/communities/${communityId}/settings`);
+      const response = await fetch(`${API_BASE_URL}/communities/${communityId}/settings`);
       if (response.ok) {
         const data = await response.json();
         if (data.success && data.data) {
@@ -65,7 +66,7 @@ const CallbackSetup: React.FC<CallbackSetupProps> = ({ communityId }) => {
       setLoading(true);
 
       // Получаем конфигурацию VK OAuth с backend
-      const configResponse = await fetch('http://localhost:5001/api/vk/config');
+      const configResponse = await fetch('${API_BASE_URL}/vk/config');
       const configData = await configResponse.json();
       
       if (!configData.success) {

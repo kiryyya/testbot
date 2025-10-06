@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config';
 import { useAppSelector } from '../store';
 import { selectAuth } from '../store/authSlice';
 import { getUserManagedGroups, VKGroup } from '../services/vkApi';
@@ -62,7 +63,7 @@ const AddCommunity: React.FC<AddCommunityProps> = ({ onCommunityAdded }) => {
 
     try {
       // Получаем конфигурацию VK OAuth с backend
-      const configResponse = await fetch('http://localhost:5001/api/vk/config');
+      const configResponse = await fetch('${API_BASE_URL}/vk/config');
       const configData = await configResponse.json();
       
       if (!configData.success) {
