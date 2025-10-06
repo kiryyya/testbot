@@ -66,7 +66,7 @@ const CallbackSetup: React.FC<CallbackSetupProps> = ({ communityId }) => {
       setLoading(true);
 
       // Получаем конфигурацию VK OAuth с backend
-      const configResponse = await fetch('${API_BASE_URL}/vk/config');
+      const configResponse = await fetch(`${API_BASE_URL}/vk/config`);
       const configData = await configResponse.json();
       
       if (!configData.success) {

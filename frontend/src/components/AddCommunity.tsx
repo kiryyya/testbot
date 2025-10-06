@@ -63,7 +63,7 @@ const AddCommunity: React.FC<AddCommunityProps> = ({ onCommunityAdded }) => {
 
     try {
       // Получаем конфигурацию VK OAuth с backend
-      const configResponse = await fetch('${API_BASE_URL}/vk/config');
+      const configResponse = await fetch(`${API_BASE_URL}/vk/config`);
       const configData = await configResponse.json();
       
       if (!configData.success) {
