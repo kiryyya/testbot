@@ -67,7 +67,7 @@ const VKAuthCallbackPage: React.FC = () => {
           communityId: parseInt(communityId)
         });
         
-        const response = await fetch('${API_BASE_URL}/auth/vk/exchange-code', {
+        const response = await fetch(`${API_BASE_URL}/auth/vk/exchange-code`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
