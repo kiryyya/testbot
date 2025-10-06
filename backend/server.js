@@ -553,9 +553,8 @@ const handleWallComment = async (commentData, groupId) => {
     const postGameSettings = await getPostGameSettings(commentData.post_id);
     
     if (!postGameSettings || !postGameSettings.game_enabled) {
-      console.log('🎮 Игра отключена для этого поста, отправляем обычный автоответ');
-      // Отправляем обычный автоответ без игровой логики
-      await replyToComment(commentData, groupId, null, false, 0, false);
+      console.log('🎮 Игра отключена для этого поста, пропускаем обработку комментария (не отвечаем)');
+      // Если игра выключена - не отвечаем на комментарий вообще
       return;
     }
     
