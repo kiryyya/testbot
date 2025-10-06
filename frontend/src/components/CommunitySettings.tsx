@@ -43,11 +43,11 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
         if (data.success && data.data) {
           const communitySettings = data.data;
           setSettings({
-            autoReplyEnabled: communitySettings.auto_reply_enabled,
-            autoReplyText: communitySettings.auto_reply_text,
-            gameEnabled: communitySettings.game_enabled,
-            defaultAttempts: communitySettings.default_attempts,
-            defaultLives: communitySettings.default_lives,
+            autoReplyEnabled: Boolean(communitySettings.auto_reply_enabled),
+            autoReplyText: communitySettings.auto_reply_text || '',
+            gameEnabled: Boolean(communitySettings.game_enabled),
+            defaultAttempts: Number(communitySettings.default_attempts) || 5,
+            defaultLives: Number(communitySettings.default_lives) || 100,
             vkAccessToken: communitySettings.vk_access_token || ''
           });
         }
