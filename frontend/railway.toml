@@ -1,0 +1,11 @@
+# Railway Configuration для Frontend
+# Эта конфигурация будет использоваться автоматически для frontend сервиса
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "npx serve -s build -l $PORT"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
