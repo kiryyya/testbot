@@ -1810,10 +1810,11 @@ app.post('/api/communities/:communityId/settings', async (req, res) => {
       });
     }
     
-    if (autoReplyText !== undefined && (typeof autoReplyText !== 'string' || autoReplyText.trim().length === 0)) {
+    // autoReplyText может быть пустым если автоответы выключены
+    if (autoReplyText !== undefined && autoReplyText !== null && typeof autoReplyText !== 'string') {
       return res.status(400).json({
         success: false,
-        message: 'autoReplyText должно быть непустой строкой'
+        message: 'autoReplyText должно быть строкой'
       });
     }
     
