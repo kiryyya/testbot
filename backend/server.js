@@ -39,8 +39,39 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5001;
 
+// CORS настройки для production
+const corsOptions = {
+  origin: function (origin, callback) {
+    // Разрешённые origins
+    const allowedOrigins = [
+      'http://localhost:3000', // Для локальной разработки
+      'http://localhost:3001',
+      process.env.FRONTEND_URL // Production URL из environment variables
+    ].filter(Boolean); // Убираем undefined значения
+    
+    // Разрешаем запросы без origin (например, Postman, curl)
+    if (!origin) return callback(null, true);
+    
+    // Проверяем, разрешён ли origin
+    if (allowedOrigins.indexOf(origin) !== -1) {
+      callback(null, true);
+    } else {
+      // В development режиме разрешаем все
+      if (process.env.NODE_ENV !== 'production') {
+        callback(null, true);
+      } else {
+        console.warn('⚠️ CORS blocked origin:', origin);
+        callback(new Error('Not allowed by CORS'));
+      }
+    }
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+};
+
 // Middleware
-app.use(cors());
+app.use(cors(corsOptions));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({ extended: true }));
 
