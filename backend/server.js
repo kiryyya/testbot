@@ -579,19 +579,25 @@ const handleWallComment = async (commentData, groupId) => {
       vk_user_id: player.vk_user_id,
       attempts_left: player.attempts_left,
       lives_count: player.lives_count,
-      total_score: player.total_score
+      total_score: player.total_score,
+      has_won: player.has_won
     });
     
-    // 3. Проверяем, есть ли у игрока попытки для этого поста
-    if (player.attempts_left <= 0) {
-      console.log('🚫 У игрока закончились попытки для этого поста, отправляем уведомление');
-      
-      // Отправляем сообщение о том, что попытки закончились
-      await replyToComment(commentData, groupId, player, false, 0, true); // true = attempts_finished
+    // 3. Проверяем, не выиграл ли уже игрок - если да, дублируем победное сообщение
+    if (player.has_won) {
+      console.log('🏆 Игрок уже выиграл в этом посте, отправляем победное сообщение');
+      await replyToComment(commentData, groupId, player, true, 0, false); // true = isVictory
       return;
     }
     
-      // 3. Рассчитать урон жизней (фиксированный 20 жизней за попытку)
+    // 4. Проверяем, есть ли у игрока попытки для этого поста
+    if (player.attempts_left <= 0) {
+      console.log('🚫 У игрока закончились попытки для этого поста, больше не может участвовать');
+      // Попытки закончились - больше не отвечаем и не обрабатываем
+      return;
+    }
+    
+      // 5. Рассчитать урон жизней (рандомный от 10 до 30 жизней за попытку)
       const livesToLose = calculateDamage();
     console.log(`🎲 Рассчитан урон: ${livesToLose} жизней`);
     
@@ -632,6 +638,20 @@ const handleWallComment = async (commentData, groupId) => {
         
         // 6. Проверить условия победы
         const isVictory = checkVictoryConditions(updatedPlayer);
+        
+        // Если победа - устанавливаем has_won = true
+        if (isVictory) {
+          console.log('🎉 Игрок победил! Устанавливаем has_won = true');
+          await updatePostPlayerStats(player.id, 0, 0, 0, true); // has_won = true
+          updatedPlayer.has_won = true; // Обновляем локальный объект
+        }
+        
+        // Проверяем: попытки закончились, но жизни остались = не повезло
+        if (updatedPlayer.attempts_left <= 0 && updatedPlayer.lives_count > 0 && !isVictory) {
+          console.log('😔 Попытки закончились, но жизни остались - не повезло, game over');
+          await replyToComment(commentData, groupId, updatedPlayer, false, livesToLose, true); // attempts_finished = true
+          return;
+        }
         
         // 7. Автоматически отвечаем на комментарий
         await replyToComment(commentData, groupId, updatedPlayer, isVictory, livesToLose, false); // false = attempts_finished
@@ -695,7 +715,12 @@ const generateReplyText = async (originalText, playerData = null, isVictory = fa
     if (isVictory) {
       userPrompt += `\n\n🎉 ПОБЕДА! Пользователь прошел игру! Поздравь его с победой и упомяни про приз.`;
     } else if (attemptsFinished) {
-      userPrompt += `\n\n🚫 У пользователя закончились попытки. Поддержи его и объясни ситуацию.`;
+      // Попытки закончились - проверяем остались ли жизни
+      if (playerData && playerData.lives_count > 0) {
+        userPrompt += `\n\n😔 Не повезло! У пользователя закончились попытки, но остались жизни (${playerData.lives_count}). Игра окончена. Поддержи его и предложи попробовать еще раз в другой раз.`;
+      } else {
+        userPrompt += `\n\n🚫 У пользователя закончились и попытки и жизни. Поддержи его.`;
+      }
     } else if (playerData) {
       if (playerData.lives_count <= 20) {
         userPrompt += `\n\n💔 У пользователя мало жизней! Поддержи его.`;

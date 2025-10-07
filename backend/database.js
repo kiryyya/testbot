@@ -251,12 +251,26 @@ const createTable = async () => {
         attempts_left INTEGER DEFAULT 5,
         lives_count INTEGER DEFAULT 100,
         total_score INTEGER DEFAULT 0,
+        has_won BOOLEAN DEFAULT false,
         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         is_active BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         UNIQUE(post_id, vk_user_id)
       );
+    `;
+    
+    // Миграция: добавляем поле has_won если его еще нет
+    const addHasWonColumnQuery = `
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='post_players' AND column_name='has_won'
+        ) THEN
+          ALTER TABLE post_players ADD COLUMN has_won BOOLEAN DEFAULT false;
+        END IF;
+      END $$;
     `;
 
     // Таблица событий по постам
@@ -283,6 +297,10 @@ const createTable = async () => {
 
     await pool.query(postPlayersQuery);
     console.log('✅ Таблица post_players создана или уже существует');
+    
+    // Выполняем миграцию для добавления has_won
+    await pool.query(addHasWonColumnQuery);
+    console.log('✅ Миграция has_won выполнена');
 
     await pool.query(postEventsQuery);
     console.log('✅ Таблица post_events создана или уже существует');
@@ -516,10 +534,12 @@ const getPlayerEvents = async (playerId, limit = 50) => {
   }
 };
 
-// Функция для расчета урона жизней (фиксированный урон 20 жизней за попытку)
+// Функция для расчета урона жизней (рандомный урон от 10 до 30 жизней за попытку)
 const calculateDamage = () => {
-  const damage = 20; // Фиксированный урон 20 жизней за попытку
-  console.log(`🎯 Урон за попытку: ${damage} жизней`);
+  const minDamage = 10;
+  const maxDamage = 30;
+  const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
+  console.log(`🎯 Рандомный урон за попытку: ${damage} жизней (диапазон ${minDamage}-${maxDamage})`);
   return damage;
 };
 
@@ -662,9 +682,21 @@ const createPostEvent = async (eventData) => {
 };
 
 // Функция для обновления статистики игрока поста
-const updatePostPlayerStats = async (playerId, attemptsUsed = 0, livesUsed = 0, scoreEarned = 0) => {
+const updatePostPlayerStats = async (playerId, attemptsUsed = 0, livesUsed = 0, scoreEarned = 0, hasWon = null) => {
   try {
-    const query = `
+    // Если hasWon передан, обновляем его, иначе оставляем без изменений
+    const query = hasWon !== null ? `
+      UPDATE post_players 
+      SET 
+        attempts_left = GREATEST(0, attempts_left - $2),
+        lives_count = GREATEST(0, lives_count - $3),
+        total_score = total_score + $4,
+        has_won = $5,
+        last_activity = CURRENT_TIMESTAMP,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+    ` : `
       UPDATE post_players 
       SET 
         attempts_left = GREATEST(0, attempts_left - $2),
@@ -676,11 +708,15 @@ const updatePostPlayerStats = async (playerId, attemptsUsed = 0, livesUsed = 0, 
       RETURNING *
     `;
     
-    const result = await pool.query(query, [playerId, attemptsUsed, livesUsed, scoreEarned]);
+    const params = hasWon !== null 
+      ? [playerId, attemptsUsed, livesUsed, scoreEarned, hasWon]
+      : [playerId, attemptsUsed, livesUsed, scoreEarned];
+    
+    const result = await pool.query(query, params);
     
     if (result.rows.length > 0) {
       const player = result.rows[0];
-      console.log(`📊 Статистика игрока поста обновлена: попытки ${player.attempts_left}, жизни ${player.lives_count}, очки ${player.total_score}`);
+      console.log(`📊 Статистика игрока поста обновлена: попытки ${player.attempts_left}, жизни ${player.lives_count}, очки ${player.total_score}, победа ${player.has_won}`);
       return player;
     }
     return null;
