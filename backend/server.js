@@ -648,15 +648,23 @@ const handleWallComment = async (commentData, groupId) => {
 };
 
 // Функция для генерации текста ответа через GPT
-const generateReplyText = async (originalText, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false) => {
+const generateReplyText = async (originalText, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false, groupId = null) => {
   try {
     console.log('🤖 Генерация текста ответа через GPT:', {
       originalText: originalText.substring(0, 100) + '...',
       isVictory,
       livesLost,
       attemptsFinished,
-      hasPlayerData: !!playerData
+      hasPlayerData: !!playerData,
+      groupId
     });
+    
+    // Если победа - возвращаем фиксированный текст с ссылкой на ЛС сообщества
+    if (isVictory && groupId) {
+      const victoryText = `🎉 Поздравляем! Вы выиграли!\n\nДля получения приза отправьте ключевое слово в ЛС сообщества по ссылке:\nhttps://vk.me/club${groupId}`;
+      console.log('✅ Текст победы сформирован:', victoryText);
+      return victoryText;
+    }
 
     // Формируем контекст для GPT
     let systemPrompt = `Ты - дружелюбный бот для игрового сообщества ВКонтакте. Твоя задача - генерировать уникальные, позитивные ответы на комментарии пользователей.
@@ -787,7 +795,7 @@ const replyToComment = async (commentData, groupId, playerData = null, isVictory
     const originalText = commentData.text || '';
     
     console.log('🤖 Генерируем ответ на комментарий...');
-    const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished);
+    const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished, groupId);
     
     // Формируем текст ответа с игровой статистикой
     let replyText;
