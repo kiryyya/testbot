@@ -118,7 +118,7 @@ body {
 
 .notification {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   padding: 14px 18px;
   border-radius: var(--border-radius-md);
@@ -130,7 +130,7 @@ body {
   align-items: center;
   gap: 12px;
   min-width: 280px;
-  animation: slideIn 0.3s ease-out;
+  animation: slideInUp 0.3s ease-out;
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
@@ -208,6 +208,17 @@ body {
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
     opacity: 1;
   }
 }

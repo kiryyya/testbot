@@ -10,7 +10,7 @@
 /* Уведомления */
 .admin-notification {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   padding: 15px 20px;
   border-radius: 8px;
@@ -21,7 +21,7 @@
   align-items: center;
   gap: 10px;
   min-width: 300px;
-  animation: slideInRight 0.3s ease;
+  animation: slideInUp 0.3s ease;
 }
 
 .admin-notification.success {
@@ -497,6 +497,17 @@ input:disabled + .toggle-slider {
   }
   to {
     transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes slideInUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
     opacity: 1;
   }
 }

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Header from '../components/Header';
 import './LoginPage.css';
 import VKAuth from '../components/VKAuth';
 
@@ -8,10 +9,6 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
-  const [isDarkMode, setIsDarkMode] = useState(() => {
-    const savedTheme = localStorage.getItem('theme');
-    return savedTheme === 'dark';
-  });
 
   const handleLoginClick = () => {
     setIsLoginModalOpen(true);
@@ -26,39 +23,14 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
     onVKLogin(userData);
   };
 
-  const toggleTheme = () => {
-    const newTheme = !isDarkMode;
-    setIsDarkMode(newTheme);
-    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
-  };
 
   return (
-    <div className={`login-page ${isDarkMode ? 'dark-mode' : ''}`}>
+    <div className="login-page">
       {/* Header */}
-      <header className="login-header">
-        <div className="header-content">
-          <div className="logo">
-            <div className="logo-icon">TB</div>
-            <span className="logo-text">TestBot</span>
-          </div>
-          <nav className="header-nav">
-            <button className="nav-link">Продукты</button>
-            <button className="nav-link">Решения</button>
-            <button className="nav-link">Цены</button>
-            <button className="nav-link">Ресурсы</button>
-            <button className="nav-link">Компания</button>
-          </nav>
-          <div className="header-actions">
-            <button className="search-btn">🔍</button>
-            <button className="phone-btn">📞</button>
-            <button className="theme-toggle" onClick={toggleTheme}>
-              {isDarkMode ? '☀️' : '🌙'}
-            </button>
-            <button className="login-btn" onClick={handleLoginClick}>Войти</button>
-            <button className="signup-btn">Регистрация</button>
-          </div>
-        </div>
-      </header>
+      <Header 
+        showNavigation={false}
+        onLoginClick={handleLoginClick}
+      />
 
       {/* Hero Section */}
       <section className="hero-section">
@@ -75,10 +47,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
             Ускоряйте закрытие сделок с помощью AI-инсайтов, прогнозной аналитики и бесшовных рабочих процессов — все на доверенной платформе.
           </p>
           
-          <div className="hero-actions">
+          {/* <div className="hero-actions">
             <button className="cta-primary">Начать бесплатно</button>
             <button className="cta-secondary">Запросить демо</button>
-          </div>
+          </div> */}
         </div>
       </section>
 

@@ -244,11 +244,11 @@ const CommunityDetailPage: React.FC = () => {
 
       {/* Основная информация */}
       <div className="community-content">
-        {activeTab === 'info' && (
+        {/* {activeTab === 'info' && ( */}
           <>
             {/* Статистика */}
-            <div className="community-stats-section">
-          <h2>Статистика</h2>
+            {/* <div className="community-stats-section"> */}
+          {/* <h2>Статистика</h2>
           <div className="stats-grid">
             <div className="stat-card">
               <div className="stat-number">
@@ -268,31 +268,31 @@ const CommunityDetailPage: React.FC = () => {
                 <div className="stat-label">Уровень доступа</div>
               </div>
             )}
-          </div>
-        </div>
+          </div> */}
+        {/* </div> */}
 
         {/* Описание */}
-        {community.description && (
+        {/* {community.description && (
           <div className="community-description-section">
             <h2>Описание</h2>
             <div className="description-content">
               {community.description}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Деятельность */}
-        {community.activity && (
+        {/* {community.activity && (
           <div className="community-activity-section">
             <h2>Деятельность</h2>
             <div className="activity-content">
               {community.activity}
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Возможности */}
-        <div className="community-permissions-section">
+        {/* <div className="community-permissions-section">
           <h2>Ваши возможности</h2>
           <div className="permissions-grid">
             {community.can_post === 1 && (
@@ -352,10 +352,10 @@ const CommunityDetailPage: React.FC = () => {
               <p>Особых возможностей не предоставлено</p>
             </div>
           )}
-        </div>
+        </div> */}
 
         {/* Дополнительная информация */}
-        <div className="community-additional-info">
+        {/* <div className="community-additional-info">
           <h2>Дополнительная информация</h2>
           <div className="info-table">
             <div className="info-row">
@@ -401,15 +401,15 @@ const CommunityDetailPage: React.FC = () => {
               </span>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Настройка Callback API */}
-        <CallbackSetup communityId={community.id} />
+        {/* <CallbackSetup communityId={community.id} /> */}
 
         {/* Настройки автоответов для сообщества */}
         <CommunitySettings communityId={community.id} />
           </>
-        )}
+        {/* )} */}
 
         {activeTab === 'posts' && (
           <div className="community-posts-section">

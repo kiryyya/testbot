@@ -938,16 +938,6 @@ const VKAuth = ({ onAuthSuccess }) => {
           className="vk-auth-container"
         />
       </div>
-      
-      <div className="info-section">
-        <h3>Преимущества входа через VK ID:</h3>
-        <ul>
-          <li>Быстрая авторизация в один клик</li>
-          <li>Безопасность данных</li>
-          <li>Двухфакторная аутентификация</li>
-          <li>Вход по лицу или отпечатку пальца</li>
-        </ul>
-      </div>
     </div>
   );
 };

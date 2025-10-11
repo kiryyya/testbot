@@ -7,17 +7,9 @@
 
 .layout-main {
   flex: 1;
-  transition: margin-left 0.3s ease;
   min-height: 100vh;
   position: relative;
-}
-
-.layout-main-shifted {
-  margin-left: 280px;
-}
-
-.layout-main-full {
-  margin-left: 70px;
+  margin-top: 70px; /* Высота хедера */
 }
 
 .layout-content {
@@ -28,9 +20,8 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
-  .layout-main-shifted,
-  .layout-main-full {
-    margin-left: 0;
+  .layout-main {
+    margin-top: 60px; /* Меньший отступ на мобильных */
   }
 }
 

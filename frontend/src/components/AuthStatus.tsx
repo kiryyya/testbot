@@ -16,14 +16,15 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className = '' }) => {
   }
 
   return (
-    <div className={`auth-status ${className}`}>
-      <div className="auth-status-header">
+    <>
+    {/* <div className={`auth-status ${className}`}> */}
+      {/* <div className="auth-status-header">
         <span className="auth-method-badge">
           {authMethod === 'vk' ? 'VK ID' : 'Авторизован'}
         </span>
-      </div>
+      </div> */}
       
-      <div className="user-info">
+      {/* <div className="user-info">
         {user.photo_100 && (
           <img 
             src={user.photo_100} 
@@ -46,9 +47,10 @@ const AuthStatus: React.FC<AuthStatusProps> = ({ className = '' }) => {
             <div className="user-domain">@{user.domain}</div>
           )}
           {/* Статус online не отображается, т.к. VK ID SDK не возвращает точные данные */}
-        </div>
-      </div>
-    </div>
+        {/* </div> */}
+      {/* </div>  */}
+    {/* </div> */}
+    </>
   );
 };
 

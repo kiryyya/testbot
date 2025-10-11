@@ -66,14 +66,14 @@ const HomePage: React.FC = () => {
 
   return (
     <div className="home-page">
-      <header className="home-header">
+      {/* <header className="home-header">
         <h1>TestBot - Marketing Project</h1>
         <p>Система управления данными</p>
         <div className="features-badges">
           <span className="badge">DATABASE</span>
           <span className="badge">REAL-TIME</span>
         </div>
-      </header>
+      </header> */}
 
       {/* Уведомления */}
       {notification && (
@@ -83,21 +83,21 @@ const HomePage: React.FC = () => {
         </div>
       )}
 
-      <main className="home-main">
+      {/* <main className="home-main"> */}
         {/* Список данных */}
-        <section>
-          <DataList
-            data={data}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            loading={loading}
-          />
-        </section>
-      </main>
+        {/* <section> */}
+          {/* <DataList */}
+            {/* data={data} */}
+            {/* onEdit={handleEdit} */}
+            {/* onDelete={handleDelete} */}
+            {/* loading={loading} */}
+          {/* /> */}
+        {/* </section> */}
+      {/* </main> */}
 
-      <footer className="home-footer">
-        <p>Проект на React + Node.js + PostgreSQL</p>
-      </footer>
+      {/* <footer className="home-footer"> */}
+        {/* <p>Проект на React + Node.js + PostgreSQL</p> */}
+      {/* </footer> */}
     </div>
   );
 };

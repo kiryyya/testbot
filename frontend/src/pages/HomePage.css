@@ -75,7 +75,7 @@
 /* Notifications */
 .notification {
   position: fixed;
-  top: 20px;
+  bottom: 20px;
   right: 20px;
   padding: 15px 20px;
   border-radius: 8px;
@@ -86,7 +86,7 @@
   align-items: center;
   gap: 10px;
   min-width: 300px;
-  animation: slideIn 0.3s ease;
+  animation: slideInUp 0.3s ease;
 }
 
 .notification.success {
@@ -137,13 +137,13 @@
   background: #5a6268;
 }
 
-@keyframes slideIn {
+@keyframes slideInUp {
   from {
-    transform: translateX(100%);
+    transform: translateY(100%);
     opacity: 0;
   }
   to {
-    transform: translateX(0);
+    transform: translateY(0);
     opacity: 1;
   }
 }
@@ -169,6 +169,8 @@
   .notification {
     right: 10px;
     left: 10px;
+    bottom: 10px;
+    top: auto;
     min-width: auto;
   }
 }

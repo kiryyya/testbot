@@ -151,9 +151,9 @@ const CommunitiesPage: React.FC = () => {
       <div className="communities-header">
         <div className="communities-title-section">
           <h1>Мои сообщества</h1>
-          <p className="communities-subtitle">
+          {/* <p className="communities-subtitle">
             Добавьте сообщество для настройки Callback API и автоответов
-          </p>
+          </p> */}
         </div>
         
         <AddCommunity onCommunityAdded={handleCommunityAdded} />

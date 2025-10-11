@@ -123,7 +123,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
 
   return (
     <div className="community-settings-container">
-      <h2>⚙️ Автоответы VK</h2>
+      {/* <h2>⚙️ Автоответы VK</h2> */}
       
       {notification && (
         <div className={`notification ${notification.type}`}>
@@ -153,7 +153,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
         </div>
       </div>
 
-      <div className="settings-card">
+      {/* <div className="settings-card">
         <h3>Текст автоответа</h3>
         <p className="settings-description">
           К комментарию пользователя будет добавлен этот текст
@@ -175,11 +175,11 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
             {loading ? 'Сохранение...' : 'Сохранить'}
           </button>
         </div>
-      </div>
+      </div> */}
 
-      <div className="settings-info">
+      {/* <div className="settings-info">
         <p>💡 <strong>Совет:</strong> Укажите ключевое слово, при наличии которого в комментарии бот будет генерировать ответ через GPT.</p>
-      </div>
+      </div> */}
     </div>
   );
 };
