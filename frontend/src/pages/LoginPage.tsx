@@ -83,7 +83,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
       </section>
 
       {/* Stats Cards */}
-      <section className="stats-section">
+      {/* <section className="stats-section">
         <div className="stats-container">
           <div className="stat-card">
             <div className="stat-header">
@@ -144,7 +144,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
             </div>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* Login Form Modal */}
       {isLoginModalOpen && (
