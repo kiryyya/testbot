@@ -1,0 +1,449 @@
+/* Global Dark Mode Styles */
+
+/* Dark mode body styles */
+body.dark-mode {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  color: #ffffff;
+  transition: all 0.3s ease;
+}
+
+/* Dark mode for all pages */
+.dark-mode {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+  color: #ffffff;
+}
+
+/* Header styles */
+.dark-mode .login-header,
+.dark-mode .page-header {
+  background: rgba(15, 15, 35, 0.95);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.dark-mode .logo-text {
+  color: #ffffff;
+}
+
+.dark-mode .nav-link {
+  color: #e0e0e0;
+}
+
+.dark-mode .nav-link:hover {
+  color: #8b5cf6;
+}
+
+.dark-mode .login-btn {
+  color: #e0e0e0;
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.dark-mode .login-btn:hover {
+  background: rgba(139, 92, 246, 0.1);
+}
+
+.dark-mode .signup-btn {
+  background: #8b5cf6;
+  color: #ffffff;
+}
+
+.dark-mode .signup-btn:hover {
+  background: #a855f7;
+}
+
+/* Theme toggle button */
+.dark-mode .theme-toggle {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.dark-mode .theme-toggle:hover {
+  background: rgba(139, 92, 246, 0.3);
+  color: #a855f7;
+}
+
+/* Cards and containers */
+.dark-mode .stat-card,
+.dark-mode .community-card,
+.dark-mode .card,
+.dark-mode .container {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.dark-mode .stat-card:hover,
+.dark-mode .community-card:hover,
+.dark-mode .card:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(139, 92, 246, 0.4);
+}
+
+/* Text colors - более широкое применение */
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6,
+.dark-mode .hero-title,
+.dark-mode .hero-description,
+.dark-mode .page-title,
+.dark-mode .section-title,
+.dark-mode .card-title,
+.dark-mode .stat-title,
+.dark-mode .community-title,
+.dark-mode .post-title {
+  color: #ffffff !important;
+}
+
+.dark-mode p,
+.dark-mode span,
+.dark-mode div,
+.dark-mode .text-secondary,
+.dark-mode .hero-description,
+.dark-mode .card-description,
+.dark-mode .stat-description,
+.dark-mode .community-description,
+.dark-mode .post-text,
+.dark-mode .breadcrumb-text,
+.dark-mode .error-message,
+.dark-mode .success-message,
+.dark-mode .loading-text,
+.dark-mode .subtitle,
+.dark-mode .description {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .stat-number,
+.dark-mode .balance-amount,
+.dark-mode .stat-value,
+.dark-mode .metric-value,
+.dark-mode .count-value {
+  color: #ffffff !important;
+}
+
+.dark-mode .stat-text,
+.dark-mode .balance-label,
+.dark-mode .stat-label,
+.dark-mode .metric-label,
+.dark-mode .count-label {
+  color: #e0e0e0 !important;
+}
+
+/* Дополнительные стили для специфичных элементов */
+.dark-mode .badge,
+.dark-mode .tag,
+.dark-mode .label {
+  color: #ffffff !important;
+  background: rgba(139, 92, 246, 0.2) !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+
+.dark-mode .notification,
+.dark-mode .alert,
+.dark-mode .message {
+  color: #ffffff !important;
+  background: rgba(15, 15, 35, 0.9) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .breadcrumb,
+.dark-mode .breadcrumb-link {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .breadcrumb-link:hover {
+  color: #8b5cf6 !important;
+}
+
+.dark-mode .back-link,
+.dark-mode .back-button {
+  color: #8b5cf6 !important;
+}
+
+.dark-mode .back-link:hover,
+.dark-mode .back-button:hover {
+  color: #a855f7 !important;
+}
+
+/* Buttons */
+.dark-mode .btn-primary {
+  background: #8b5cf6;
+  color: #ffffff;
+  border: none;
+}
+
+.dark-mode .btn-primary:hover {
+  background: #a855f7;
+}
+
+.dark-mode .btn-secondary {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+  border: 1px solid rgba(139, 92, 246, 0.3);
+}
+
+.dark-mode .btn-secondary:hover {
+  background: rgba(139, 92, 246, 0.3);
+}
+
+/* Forms */
+.dark-mode .form-control,
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  color: #ffffff;
+}
+
+.dark-mode .form-control:focus,
+.dark-mode input:focus,
+.dark-mode textarea:focus,
+.dark-mode select:focus {
+  border-color: #8b5cf6;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .form-label {
+  color: #e0e0e0;
+}
+
+/* Modals */
+.dark-mode .modal,
+.dark-mode .login-form-container {
+  background: rgba(15, 15, 35, 0.95);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  backdrop-filter: blur(20px);
+}
+
+.dark-mode .modal-header {
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .close-modal-btn {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+.dark-mode .close-modal-btn:hover {
+  background: rgba(139, 92, 246, 0.3);
+  color: #a855f7;
+}
+
+/* Tables */
+.dark-mode table {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode th,
+.dark-mode td {
+  border-color: rgba(139, 92, 246, 0.2);
+  color: #e0e0e0;
+}
+
+.dark-mode th {
+  background: rgba(139, 92, 246, 0.1);
+  color: #ffffff;
+}
+
+/* Sidebar */
+.dark-mode .sidebar {
+  background: rgba(15, 15, 35, 0.95);
+  border-right: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .sidebar-header {
+  background: rgba(10, 10, 25, 0.95);
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .sidebar-footer {
+  background: rgba(10, 10, 25, 0.95);
+  border-top: 1px solid rgba(139, 92, 246, 0.2);
+}
+
+.dark-mode .sidebar-link {
+  color: #e0e0e0;
+}
+
+.dark-mode .sidebar-link:hover {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.dark-mode .sidebar-link-active {
+  background: rgba(139, 92, 246, 0.2);
+  color: #8b5cf6;
+}
+
+/* Loading states */
+.dark-mode .loading-spinner {
+  border-color: rgba(139, 92, 246, 0.2);
+  border-top-color: #8b5cf6;
+}
+
+/* Error states */
+.dark-mode .error {
+  color: #ff6b6b;
+}
+
+.dark-mode .success {
+  color: #8b5cf6;
+}
+
+/* Links */
+.dark-mode a {
+  color: #8b5cf6;
+}
+
+.dark-mode a:hover {
+  color: #a855f7;
+}
+
+/* Scrollbar */
+.dark-mode ::-webkit-scrollbar {
+  width: 8px;
+}
+
+.dark-mode ::-webkit-scrollbar-track {
+  background: rgba(15, 15, 35, 0.5);
+}
+
+.dark-mode ::-webkit-scrollbar-thumb {
+  background: rgba(139, 92, 246, 0.3);
+  border-radius: 4px;
+}
+
+.dark-mode ::-webkit-scrollbar-thumb:hover {
+  background: rgba(139, 92, 246, 0.5);
+}
+
+/* Специфичные стили для страниц */
+.dark-mode .home-page h1,
+.dark-mode .home-page h2,
+.dark-mode .home-page h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .home-page p,
+.dark-mode .home-page span {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .communities-page h1,
+.dark-mode .communities-page h2,
+.dark-mode .communities-page h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .communities-page p,
+.dark-mode .communities-page span {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .game-settings-page h1,
+.dark-mode .game-settings-page h2,
+.dark-mode .game-settings-page h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .game-settings-page p,
+.dark-mode .game-settings-page span {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .community-detail-page h1,
+.dark-mode .community-detail-page h2,
+.dark-mode .community-detail-page h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .community-detail-page p,
+.dark-mode .community-detail-page span {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .oauth-callback-page h1,
+.dark-mode .oauth-callback-page h2,
+.dark-mode .oauth-callback-page h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .oauth-callback-page p,
+.dark-mode .oauth-callback-page span {
+  color: #e0e0e0 !important;
+}
+
+/* Универсальные стили для всех текстовых элементов */
+.dark-mode * {
+  color: inherit;
+}
+
+.dark-mode h1, .dark-mode h2, .dark-mode h3, 
+.dark-mode h4, .dark-mode h5, .dark-mode h6 {
+  color: #ffffff !important;
+}
+
+.dark-mode p, .dark-mode span, .dark-mode div, 
+.dark-mode label, .dark-mode small {
+  color: #e0e0e0 !important;
+}
+
+/* Дополнительные стили для компонентов */
+.dark-mode .data-list,
+.dark-mode .data-item,
+.dark-mode .data-cell {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .community-card,
+.dark-mode .post-card {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .community-card h3,
+.dark-mode .post-card h3 {
+  color: #ffffff !important;
+}
+
+.dark-mode .community-card p,
+.dark-mode .post-card p {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .auth-status,
+.dark-mode .user-info {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .sidebar {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .sidebar h3,
+.dark-mode .sidebar h4 {
+  color: #ffffff !important;
+}
+
+.dark-mode .sidebar p,
+.dark-mode .sidebar span {
+  color: #e0e0e0 !important;
+}
+
+/* Принудительное применение цветов */
+.dark-mode *:not(button):not(input):not(textarea):not(select) {
+  color: inherit;
+}
+
+.dark-mode h1, .dark-mode h2, .dark-mode h3, 
+.dark-mode h4, .dark-mode h5, .dark-mode h6 {
+  color: #ffffff !important;
+}
+
+.dark-mode p, .dark-mode span, .dark-mode div, 
+.dark-mode label, .dark-mode small, .dark-mode strong {
+  color: #e0e0e0 !important;
+}

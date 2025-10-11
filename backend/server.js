@@ -46,6 +46,8 @@ const corsOptions = {
     const allowedOrigins = [
       'http://localhost:3000', // Для локальной разработки
       'http://localhost:3001',
+      'http://localhost:80',
+      'http://localhost',
       process.env.FRONTEND_URL // Production URL из environment variables
     ].filter(Boolean); // Убираем undefined значения
     

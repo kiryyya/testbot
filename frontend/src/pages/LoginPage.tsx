@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import './LoginPage.css';
 import VKAuth from '../components/VKAuth';
 
@@ -7,51 +7,160 @@ interface LoginPageProps {
 }
 
 const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
+  const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(() => {
+    const savedTheme = localStorage.getItem('theme');
+    return savedTheme === 'dark';
+  });
+
+  const handleLoginClick = () => {
+    setIsLoginModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsLoginModalOpen(false);
+  };
+
+  const handleAuthSuccess = (userData: any) => {
+    setIsLoginModalOpen(false);
+    onVKLogin(userData);
+  };
+
+  const toggleTheme = () => {
+    const newTheme = !isDarkMode;
+    setIsDarkMode(newTheme);
+    localStorage.setItem('theme', newTheme ? 'dark' : 'light');
+  };
 
   return (
-    <div className="login-page">
-      <div className="login-container">
-        <div className="login-info">
-          <h1>TestBot Dashboard</h1>
-          <p className="subtitle">Система управления и аналитики</p>
-          
-          <div className="features">
-            <div className="feature">
-              <div className="feature-icon">👥</div>
-              <h3>Управление пользователями</h3>
-              <p>Полный контроль над пользователями системы, их ролями и правами доступа</p>
-            </div>
-            
-            <div className="feature">
-              <div className="feature-icon">💬</div>
-              <h3>VK интеграция</h3>
-              <p>Мониторинг сообщений, лайков и взаимодействий в социальной сети ВКонтакте</p>
-            </div>
-            
-            <div className="feature">
-              <div className="feature-icon">📊</div>
-              <h3>Аналитика</h3>
-              <p>Детальная статистика и отчеты по активности пользователей и эффективности</p>
-            </div>
-            
-            <div className="feature">
-              <div className="feature-icon">⚙️</div>
-              <h3>Администрирование</h3>
-              <p>Гибкие настройки системы и расширенные возможности управления</p>
-            </div>
+    <div className={`login-page ${isDarkMode ? 'dark-mode' : ''}`}>
+      {/* Header */}
+      <header className="login-header">
+        <div className="header-content">
+          <div className="logo">
+            <div className="logo-icon">TB</div>
+            <span className="logo-text">TestBot</span>
+          </div>
+          <nav className="header-nav">
+            <button className="nav-link">Продукты</button>
+            <button className="nav-link">Решения</button>
+            <button className="nav-link">Цены</button>
+            <button className="nav-link">Ресурсы</button>
+            <button className="nav-link">Компания</button>
+          </nav>
+          <div className="header-actions">
+            <button className="search-btn">🔍</button>
+            <button className="phone-btn">📞</button>
+            <button className="theme-toggle" onClick={toggleTheme}>
+              {isDarkMode ? '☀️' : '🌙'}
+            </button>
+            <button className="login-btn" onClick={handleLoginClick}>Войти</button>
+            <button className="signup-btn">Регистрация</button>
           </div>
         </div>
+      </header>
 
-        <div className="login-form-container">
-          <div className="vk-auth-wrapper">
-            <h2>Авторизация через VK ID</h2>
-            <p className="auth-description">
-              Войдите в систему с помощью безопасной авторизации VK ID
-            </p>
-            <VKAuth onAuthSuccess={onVKLogin} />
+      {/* Hero Section */}
+      <section className="hero-section">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span>10,000+ КОМАНД ПО ВСЕМУ МИРУ</span>
+          </div>
+          
+          <h1 className="hero-title">
+            Ускорьте работу с <span className="highlight">умной автоматизацией AI</span>
+          </h1>
+          
+          <p className="hero-description">
+            Ускоряйте закрытие сделок с помощью AI-инсайтов, прогнозной аналитики и бесшовных рабочих процессов — все на доверенной платформе.
+          </p>
+          
+          <div className="hero-actions">
+            <button className="cta-primary">Начать бесплатно</button>
+            <button className="cta-secondary">Запросить демо</button>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* Stats Cards */}
+      <section className="stats-section">
+        <div className="stats-container">
+          <div className="stat-card">
+            <div className="stat-header">
+              <div className="stat-icon">📈</div>
+              <div className="stat-controls">
+                <span>□</span>
+                <span>✏️</span>
+                <span>⋯</span>
+              </div>
+            </div>
+            <div className="stat-chart">
+              <div className="chart-line"></div>
+              <div className="chart-point"></div>
+              <div className="chart-label">↑12% vs прошлый месяц</div>
+            </div>
+            <div className="chart-dates">
+              <span>17-21</span>
+              <span>24-28</span>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-pattern"></div>
+            <div className="stat-content">
+              <div className="stat-number">150,000+</div>
+              <div className="stat-text">Пользователей полагаются ежедневно</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-avatar">
+              <div className="avatar-image">👨‍💼</div>
+            </div>
+            <div className="stat-content">
+              <div className="stat-number">500+</div>
+              <div className="stat-text">Предприятий подключено</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-vr">
+              <div className="vr-image">🥽</div>
+            </div>
+            <div className="stat-content">
+              <div className="stat-number">10,000+</div>
+              <div className="stat-text">Команд по всему миру</div>
+            </div>
+          </div>
+
+          <div className="stat-card">
+            <div className="stat-balance">
+              <div className="balance-label">Баланс</div>
+              <div className="balance-amount">$72,840.00</div>
+              <div className="balance-status">
+                <div className="status-indicator"></div>
+                <span>Активно</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Login Form Modal */}
+      {isLoginModalOpen && (
+        <div className="login-form-overlay" onClick={handleCloseModal}>
+          <div className="login-form-container" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal-btn" onClick={handleCloseModal}>×</button>
+            <div className="vk-auth-wrapper">
+              <h2>Авторизация через VK ID</h2>
+              <p className="auth-description">
+                Войдите в систему с помощью безопасной авторизации VK ID
+              </p>
+              <VKAuth onAuthSuccess={handleAuthSuccess} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
