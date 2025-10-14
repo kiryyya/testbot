@@ -374,10 +374,10 @@ const handleNewMessage = async (message, group_id) => {
       const messageText = message.text.toLowerCase().trim();
       console.log('🔍 Проверяем ключевое слово приза:', messageText);
       
-      // Сначала ищем пост с таким ключевым словом
+      // Сначала ищем пост с таким ключевым словом (нечувствительно к регистру)
       const prizeKeywordQuery = `
         SELECT post_id, prize_keyword FROM post_game_settings 
-        WHERE prize_keyword = $1 AND game_enabled = true
+        WHERE LOWER(prize_keyword) = LOWER($1) AND game_enabled = true
       `;
       
       const keywordResult = await pool.query(prizeKeywordQuery, [messageText]);
