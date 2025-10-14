@@ -389,8 +389,13 @@ const handleNewMessage = async (message, group_id) => {
           keyword: postSettings.prize_keyword,
           user_id: message.from_id
         });
+        
+        console.log('🎁 Вызываем handlePrizeRequest для пользователя:', message.from_id, 'поста:', postSettings.post_id);
         await handlePrizeRequest(message.from_id, accessToken, group_id, postSettings.post_id);
+        console.log('🎁 handlePrizeRequest завершен');
         return;
+      } else {
+        console.log('❌ Пост с ключевым словом не найден:', messageText);
       }
     }
     
@@ -468,13 +473,13 @@ const handlePrizeRequest = async (vkUserId, accessToken, groupId, postId = null)
     if (postId) {
       playerQuery = `
         SELECT * FROM post_players 
-        WHERE vk_user_id = $1 AND post_id = $2 AND attempts_left <= 0 AND lives_count <= 0 AND has_won = true
+        WHERE vk_user_id = $1 AND post_id = $2 AND has_won = true
       `;
       queryParams = [vkUserId, postId];
     } else {
       playerQuery = `
         SELECT * FROM post_players 
-        WHERE vk_user_id = $1 AND attempts_left <= 0 AND lives_count <= 0 AND has_won = true
+        WHERE vk_user_id = $1 AND has_won = true
       `;
       queryParams = [vkUserId];
     }
