@@ -15,17 +15,17 @@ const VKAuthCallbackPage: React.FC = () => {
   useEffect(() => {
     const handleOAuthCallback = async () => {
       try {
-        console.log('🔄 OAuth Callback начало обработки...');
-        console.log('📋 URL:', window.location.href);
-        console.log('🔑 userId из Redux:', userId);
-        console.log('✅ isAuthenticated:', authState.isAuthenticated);
+        console.log('OAuth Callback начало обработки...');
+        console.log('URL:', window.location.href);
+        console.log('userId из Redux:', userId);
+        console.log('isAuthenticated:', authState.isAuthenticated);
         
         // Получаем code из URL
         const urlParams = new URLSearchParams(window.location.search);
         const code = urlParams.get('code');
         const errorParam = urlParams.get('error');
         
-        console.log('📝 OAuth code:', code ? code.substring(0, 20) + '...' : 'отсутствует');
+        console.log('OAuth code:', code ? code.substring(0, 20) + '...' : 'отсутствует');
         
         if (errorParam) {
           throw new Error(`OAuth Error: ${errorParam}`);
@@ -43,25 +43,25 @@ const VKAuthCallbackPage: React.FC = () => {
         
         const returnToCommunity = localStorage.getItem('return_to_community');
         
-        console.log('🏠 Community ID:', communityId);
-        console.log('↩️ Return to community:', returnToCommunity);
+        console.log('Community ID:', communityId);
+        console.log('Return to community:', returnToCommunity);
         
         if (!communityId) {
           throw new Error('ID сообщества не найден. Попробуйте снова.');
         }
         
         if (!userId) {
-          console.error('❌ userId отсутствует! Проверяем localStorage...');
+          console.error('userId отсутствует! Проверяем localStorage...');
           const savedAuth = localStorage.getItem('auth');
-          console.log('💾 Saved auth:', savedAuth);
+          console.log('Saved auth:', savedAuth);
           throw new Error('Пользователь не авторизован');
         }
         
-        console.log('✅ Все проверки пройдены, отправляем запрос на backend...');
+        console.log('Все проверки пройдены, отправляем запрос на backend...');
         setStatus('Получение токена доступа...');
         
         // Отправляем code на backend для обмена на access_token
-        console.log('📤 Отправка запроса на backend:', {
+        console.log('Отправка запроса на backend:', {
           code: code.substring(0, 20) + '...',
           userId,
           communityId: parseInt(communityId)
@@ -81,10 +81,10 @@ const VKAuthCallbackPage: React.FC = () => {
         
         const data = await response.json();
         
-        console.log('📥 Ответ от backend:', data);
+        console.log('Ответ от backend:', data);
         
         if (!data.success) {
-          console.error('❌ Backend вернул ошибку:', data.message);
+          console.error('Backend вернул ошибку:', data.message);
           throw new Error(data.message || 'Ошибка при обмене кода на токен');
         }
         
@@ -94,12 +94,12 @@ const VKAuthCallbackPage: React.FC = () => {
         localStorage.removeItem('pending_community_setup');
         localStorage.removeItem('pending_callback_setup');
         
-        console.log('🧹 LocalStorage очищен');
+        console.log('LocalStorage очищен');
         
-        setStatus('✅ Сообщество успешно добавлено!');
+        setStatus('Сообщество успешно добавлено!');
         
-        console.log('✅ Сообщество успешно добавлено, перенаправление...');
-        console.log('📊 Данные сообщества:', data.data);
+        console.log('Сообщество успешно добавлено, перенаправление...');
+        console.log('Данные сообщества:', data.data);
         
         // Перенаправляем на нужную страницу через 2 секунды
         setTimeout(() => {
@@ -142,14 +142,14 @@ const VKAuthCallbackPage: React.FC = () => {
                 Подождите, мы настраиваем всё автоматически...
               </p>
               <div className="oauth-steps">
-                <div className="oauth-step">✅ Получение токена доступа</div>
-                <div className="oauth-step">⏳ Настройка Callback API</div>
-                <div className="oauth-step">⏳ Сохранение настроек</div>
+                <div className="oauth-step">Получение токена доступа</div>
+                <div className="oauth-step">Настройка Callback API</div>
+                <div className="oauth-step">Сохранение настроек</div>
               </div>
             </>
           ) : (
             <>
-              <div className="oauth-error-icon">❌</div>
+              <div className="oauth-error-icon">!</div>
               <h2>Ошибка авторизации</h2>
               <p className="oauth-error-message">{error}</p>
               <p className="oauth-redirect">Перенаправление на страницу сообществ...</p>

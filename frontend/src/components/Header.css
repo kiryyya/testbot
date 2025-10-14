@@ -13,7 +13,7 @@
 }
 
 .header.scrolled {
-  background: rgba(255, 255, 255, 0.95);
+  background: var(--color-bg-white);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--color-border-light);
 }
@@ -139,8 +139,8 @@
 }
 
 .logout-btn {
-  background: #dc3545;
-  color: white;
+  background: var(--color-error);
+  color: var(--color-text-white);
   border: none;
   padding: 10px 20px;
   border-radius: 8px;
@@ -150,7 +150,7 @@
 }
 
 .logout-btn:hover {
-  background: #c82333;
+  background: var(--color-error);
   transform: translateY(-1px);
 }
 
@@ -161,63 +161,63 @@
 }
 
 .header.dark-mode.scrolled {
-  background: rgba(15, 15, 35, 0.95);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .header.dark-mode .logo-text {
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .header.dark-mode .nav-link {
-  color: #e0e0e0;
+  color: var(--color-text-secondary);
 }
 
 .header.dark-mode .nav-link:hover {
-  color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.1);
+  color: var(--color-accent);
+  background: var(--color-bg-accent);
 }
 
 .header.dark-mode .nav-link.active {
-  color: #8b5cf6;
-  background: rgba(139, 92, 246, 0.2);
+  color: var(--color-accent);
+  background: var(--color-bg-button);
 }
 
 .header.dark-mode .login-btn {
-  color: #e0e0e0;
-  border-color: rgba(139, 92, 246, 0.3);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-medium);
 }
 
 .header.dark-mode .login-btn:hover {
-  background: rgba(139, 92, 246, 0.1);
+  background: var(--color-bg-accent);
 }
 
 .header.dark-mode .signup-btn {
-  background: #8b5cf6;
-  color: #ffffff;
+  background: var(--color-accent);
+  color: var(--color-text-white);
 }
 
 .header.dark-mode .signup-btn:hover {
-  background: #a855f7;
+  background: var(--color-accent-hover);
 }
 
 .header.dark-mode .logout-btn {
-  background: #dc3545;
-  color: #ffffff;
+  background: var(--color-error);
+  color: var(--color-text-white);
 }
 
 .header.dark-mode .logout-btn:hover {
-  background: #c82333;
+  background: var(--color-error);
 }
 
 .header.dark-mode .theme-toggle {
-  background: rgba(139, 92, 246, 0.2);
-  color: #8b5cf6;
+  background: var(--color-bg-accent);
+  color: var(--color-accent);
 }
 
 .header.dark-mode .theme-toggle:hover {
-  background: rgba(139, 92, 246, 0.3);
-  color: #a855f7;
+  background: var(--color-bg-button);
+  color: var(--color-accent-hover);
 }
 
 /* Responsive Design */

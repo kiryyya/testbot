@@ -123,7 +123,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
 
   return (
     <div className="community-settings-container">
-      {/* <h2>⚙️ Автоответы VK</h2> */}
+      {/* <h2>Автоответы VK</h2> */}
       
       {notification && (
         <div className={`notification ${notification.type}`}>
@@ -178,7 +178,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
       </div> */}
 
       {/* <div className="settings-info">
-        <p>💡 <strong>Совет:</strong> Укажите ключевое слово, при наличии которого в комментарии бот будет генерировать ответ через GPT.</p>
+        <p><strong>Совет:</strong> Укажите ключевое слово, при наличии которого в комментарии бот будет генерировать ответ через GPT.</p>
       </div> */}
     </div>
   );

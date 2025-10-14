@@ -27,12 +27,12 @@ const Header: React.FC<HeaderProps> = ({
     // {
     //   path: '/',
     //   name: 'Главная',
-    //   icon: '🏠'
+    //   icon: 'home'
     // },
     // {
     //   path: '/game-settings',
     //   name: 'Настройки игры',
-    //   icon: '🎮'
+    //   icon: 'game'
     // },
     {
       path: '/communities',
@@ -80,7 +80,7 @@ const Header: React.FC<HeaderProps> = ({
         
         <div className="header-actions">
           <button className="theme-toggle" onClick={toggleTheme}>
-            {isDarkMode ? '☀️' : '🌙'}
+            {isDarkMode ? '☀' : '🌙'}
           </button>
           {onLoginClick && (
             <button className="login-btn" onClick={onLoginClick}>Войти</button>

@@ -235,6 +235,7 @@ const createTable = async () => {
         game_enabled BOOLEAN DEFAULT false,
         attempts_per_player INTEGER DEFAULT 5,
         lives_per_player INTEGER DEFAULT 100,
+        prize_keyword VARCHAR(50) DEFAULT 'приз',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -301,6 +302,22 @@ const createTable = async () => {
     // Выполняем миграцию для добавления has_won
     await pool.query(addHasWonColumnQuery);
     console.log('✅ Миграция has_won выполнена');
+    
+    // Миграция: добавляем поле prize_keyword если его еще нет
+    const addPrizeKeywordColumnQuery = `
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='post_game_settings' AND column_name='prize_keyword'
+        ) THEN
+          ALTER TABLE post_game_settings ADD COLUMN prize_keyword VARCHAR(50) DEFAULT 'приз';
+        END IF;
+      END $$;
+    `;
+    
+    await pool.query(addPrizeKeywordColumnQuery);
+    console.log('✅ Миграция prize_keyword выполнена');
 
     await pool.query(postEventsQuery);
     console.log('✅ Таблица post_events создана или уже существует');
@@ -578,20 +595,21 @@ const getPostGameSettings = async (postId) => {
 };
 
 // Функция для создания/обновления настроек игры поста
-const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100) => {
+const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100, prizeKeyword = 'приз') => {
   try {
     const query = `
-      INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player)
-      VALUES ($1, $2, $3, $4)
+      INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player, prize_keyword)
+      VALUES ($1, $2, $3, $4, $5)
       ON CONFLICT (post_id) 
       DO UPDATE SET 
         game_enabled = $2,
         attempts_per_player = $3,
         lives_per_player = $4,
+        prize_keyword = $5,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
-    const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer]);
+    const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer, prizeKeyword]);
     return result.rows[0];
   } catch (error) {
     console.error('❌ Ошибка при настройке игры поста:', error);

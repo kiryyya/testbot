@@ -127,7 +127,7 @@
   align-items: center;
   justify-content: center;
   padding: 60px 20px;
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -160,7 +160,7 @@
 .communities-error {
   text-align: center;
   padding: 60px 20px;
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }
@@ -202,7 +202,7 @@
   display: flex;
   gap: 24px;
   margin-bottom: 24px;
-  background: white;
+  background: var(--color-bg-white);
   padding: 20px;
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
@@ -276,7 +276,7 @@
 .communities-empty {
   text-align: center;
   padding: 80px 20px;
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
 }

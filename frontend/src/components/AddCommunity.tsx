@@ -72,7 +72,7 @@ const AddCommunity: React.FC<AddCommunityProps> = ({ onCommunityAdded }) => {
 
       const { appId, redirectUri } = configData.data;
 
-      console.log('🔧 VK OAuth конфигурация:', { appId, redirectUri });
+      console.log('VK OAuth конфигурация:', { appId, redirectUri });
 
       // Формируем OAuth URL на основе реальных рабочих примеров
       // Убираем ВСЕ потенциально проблемные параметры (display, устаревшие scopes)
@@ -85,9 +85,9 @@ const AddCommunity: React.FC<AddCommunityProps> = ({ onCommunityAdded }) => {
         `group_ids=${selectedCommunity}&` + // ID сообщества для OAuth
         `v=5.199`;
 
-      console.log('🔗 Перенаправление на VK OAuth:', authUrl);
-      console.log('📋 Group ID:', selectedCommunity);
-      console.log('🔧 Redirect URI:', redirectUri);
+      console.log('Перенаправление на VK OAuth:', authUrl);
+      console.log('Group ID:', selectedCommunity);
+      console.log('Redirect URI:', redirectUri);
 
       // Перенаправляем на VK OAuth
       window.location.href = authUrl;

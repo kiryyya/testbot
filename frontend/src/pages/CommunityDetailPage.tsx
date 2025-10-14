@@ -123,7 +123,7 @@ const CommunityDetailPage: React.FC = () => {
     return (
       <div className="community-detail-page">
         <div className="community-detail-error">
-          <div className="error-icon">⚠️</div>
+          <div className="error-icon">⚠</div>
           <h2>Ошибка загрузки</h2>
           <p>{error}</p>
           <div className="error-actions">
@@ -206,7 +206,7 @@ const CommunityDetailPage: React.FC = () => {
           
           <div className="community-actions-header">
             <button onClick={handleOpenVK} className="open-vk-btn-large">
-              🔗 Открыть в ВКонтакте
+              Открыть в ВКонтакте
             </button>
             <button onClick={handleGoBack} className="back-btn-header">
               ← Назад
@@ -221,7 +221,7 @@ const CommunityDetailPage: React.FC = () => {
           className={`tab ${activeTab === 'info' ? 'active' : ''}`}
           onClick={() => setActiveTab('info')}
         >
-          <span className="tab-icon">ℹ️</span>
+          <span className="tab-icon">ℹ</span>
           Информация
         </button>
         
@@ -297,7 +297,7 @@ const CommunityDetailPage: React.FC = () => {
           <div className="permissions-grid">
             {community.can_post === 1 && (
               <div className="permission-card">
-                <div className="permission-icon">✏️</div>
+                <div className="permission-icon">✏</div>
                 <div className="permission-text">
                   <strong>Публикация записей</strong>
                   <p>Вы можете создавать записи в сообществе</p>
@@ -307,7 +307,7 @@ const CommunityDetailPage: React.FC = () => {
             
             {community.can_see_all_posts === 1 && (
               <div className="permission-card">
-                <div className="permission-icon">👁️</div>
+                <div className="permission-icon">👁</div>
                 <div className="permission-text">
                   <strong>Просмотр всех записей</strong>
                   <p>Доступны все записи, включая отложенные</p>
@@ -433,7 +433,7 @@ const CommunityDetailPage: React.FC = () => {
 
             {postsError && !postsLoading && (
               <div className="posts-error">
-                <div className="error-icon">⚠️</div>
+                <div className="error-icon">⚠</div>
                 <h3>Ошибка загрузки постов</h3>
                 <p>{postsError}</p>
                 <button onClick={loadCommunityPosts} className="retry-btn">

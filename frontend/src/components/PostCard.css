@@ -1,10 +1,10 @@
 .post-card {
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 16px;
   padding: 20px;
   margin-bottom: 16px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
-  border: 1px solid #e0e0e0;
+  border: 1px solid var(--color-border-light);
   transition: all 0.3s ease;
 }
 
@@ -32,7 +32,7 @@
 }
 
 .post-date {
-  color: #666;
+  color: var(--color-text-secondary);
   font-size: 14px;
   font-weight: 500;
   display: flex;
@@ -69,13 +69,13 @@
 .post-text {
   font-size: 16px;
   line-height: 1.6;
-  color: #333;
+  color: var(--color-text-dark);
   margin-bottom: 16px;
   word-wrap: break-word;
 }
 
 .post-text a {
-  color: #667eea;
+  color: var(--color-accent);
   text-decoration: none;
 }
 

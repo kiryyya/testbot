@@ -1,7 +1,7 @@
 /* Admin Panel Styles */
 .admin-panel {
   padding: 30px;
-  background: #f8f9fa;
+  background: var(--color-bg-light);
   min-height: 100vh;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
   position: relative;
@@ -14,7 +14,7 @@
   right: 20px;
   padding: 15px 20px;
   border-radius: 8px;
-  color: white;
+  color: var(--color-text-white);
   font-weight: 500;
   z-index: 1000;
   display: flex;
@@ -25,17 +25,17 @@
 }
 
 .admin-notification.success {
-  background: linear-gradient(135deg, #28a745, #20c997);
+  background: linear-gradient(135deg, var(--color-success), var(--color-success));
 }
 
 .admin-notification.error {
-  background: linear-gradient(135deg, #dc3545, #e74c3c);
+  background: linear-gradient(135deg, var(--color-error), var(--color-error));
 }
 
 .admin-notification button {
   background: rgba(255, 255, 255, 0.2);
   border: none;
-  color: white;
+  color: var(--color-text-white);
   width: 24px;
   height: 24px;
   border-radius: 50%;
@@ -84,7 +84,7 @@
 }
 
 .admin-card {
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 12px;
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
   overflow: hidden;
@@ -186,9 +186,9 @@
 }
 
 /* Системная информация */
-.system-info {
+/* .system-info {
   space-y: 15px;
-}
+} */
 
 .info-item {
   display: flex;
@@ -224,7 +224,7 @@
 }
 
 .status-indicator.warning {
-  background: #fff3cd;
+  background: var(--color-bg-light);
   color: #856404;
   border: 1px solid #ffeaa7;
 }

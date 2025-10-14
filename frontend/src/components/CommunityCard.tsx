@@ -57,12 +57,12 @@ const CommunityCard: React.FC<CommunityCardProps> = ({ community, onClick }) => 
             )}
             {community.is_closed === 1 && (
               <div className="badge closed" title="Закрытое сообщество">
-                🔒
+                Закрыто
               </div>
             )}
             {community.is_closed === 2 && (
               <div className="badge private" title="Частное сообщество">
-                🔐
+                Приватно
               </div>
             )}
           </div>
@@ -88,13 +88,13 @@ const CommunityCard: React.FC<CommunityCardProps> = ({ community, onClick }) => 
           <div className="community-stats">
             {community.members_count && (
               <span className="stat">
-                👥 {community.members_count.toLocaleString()}
+                Участников: {community.members_count.toLocaleString()}
               </span>
             )}
             
             {community.screen_name && (
               <span className="stat">
-                🔗 @{community.screen_name}
+                @{community.screen_name}
               </span>
             )}
           </div>
@@ -120,22 +120,22 @@ const CommunityCard: React.FC<CommunityCardProps> = ({ community, onClick }) => 
         <div className="community-permissions">
           {community.can_post === 1 && (
             <span className="permission" title="Можно публиковать записи">
-              ✏️ Постинг
+              Постинг
             </span>
           )}
           {community.can_see_all_posts === 1 && (
             <span className="permission" title="Видны все записи">
-              👁️ Все записи
+              Все записи
             </span>
           )}
           {community.can_upload_video === 1 && (
             <span className="permission" title="Можно загружать видео">
-              🎥 Видео
+              Видео
             </span>
           )}
           {community.can_upload_doc === 1 && (
             <span className="permission" title="Можно загружать документы">
-              📄 Документы
+              Документы
             </span>
           )}
         </div>

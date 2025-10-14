@@ -28,7 +28,7 @@
   left: 0;
   width: 100vw;
   height: 100vh;
-  background: rgba(0, 0, 0, 0.5);
+  background: var(--color-bg-primary);
   z-index: 999;
   display: none;
 }
@@ -203,8 +203,8 @@
 }
 
 .sidebar-logout-btn:hover {
-  background: #c82333;
-  border-color: #bd2130;
+  background: var(--color-error);
+  border-color: var(--color-error);
   transform: translateY(-1px);
 }
 
@@ -250,14 +250,14 @@
 }
 
 .sidebar-nav::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--color-bg-light);
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: var(--color-border-light);
   border-radius: 2px;
 }
 
 .sidebar-nav::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--color-border-medium);
 }

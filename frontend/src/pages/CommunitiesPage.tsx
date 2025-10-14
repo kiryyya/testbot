@@ -30,44 +30,44 @@ const CommunitiesPage: React.FC = () => {
   // Загрузка добавленных сообществ пользователя
   const loadUserCommunities = async () => {
     if (!userId) {
-      console.error('❌ ID пользователя не найден');
+      console.error('ID пользователя не найден');
       setError('ID пользователя не найден');
       return;
     }
 
     try {
-      console.log('📥 Загрузка сообществ для пользователя:', userId);
+      console.log('Загрузка сообществ для пользователя:', userId);
       setLoading(true);
       setError(null);
       
       const url = `${API_BASE_URL}/user/${userId}/communities`;
-      console.log('🔗 URL запроса:', url);
+      console.log('URL запроса:', url);
       
       const response = await fetch(url);
-      console.log('📡 Статус ответа:', response.status, response.statusText);
+      console.log('Статус ответа:', response.status, response.statusText);
       
       const data = await response.json();
-      console.log('📦 Полученные данные:', data);
+      console.log('Полученные данные:', data);
       
       if (data.success) {
-        console.log('✅ Успех! Количество сообществ:', data.data.length);
-        console.log('📋 Список сообществ:', data.data);
+        console.log('Успех! Количество сообществ:', data.data.length);
+        console.log('Список сообществ:', data.data);
         setCommunities(data.data);
         
         if (data.data.length === 0) {
-          console.warn('⚠️ Массив сообществ пустой');
+          console.warn('Массив сообществ пустой');
           setError('У вас пока нет добавленных сообществ');
         }
       } else {
-        console.error('❌ Backend вернул ошибку:', data.message);
+        console.error('Backend вернул ошибку:', data.message);
         setError(data.message || 'Ошибка при загрузке сообществ');
       }
     } catch (err: any) {
-      console.error('❌ Исключение при загрузке сообществ:', err);
+      console.error('Исключение при загрузке сообществ:', err);
       setError(err.message || 'Ошибка при загрузке сообществ');
     } finally {
       setLoading(false);
-      console.log('🏁 Загрузка сообществ завершена');
+      console.log('Загрузка сообществ завершена');
     }
   };
 
@@ -83,7 +83,7 @@ const CommunitiesPage: React.FC = () => {
     const handleFocus = () => {
       // Перезагружаем список когда пользователь возвращается на страницу
       if (isAuthenticated && userId) {
-        console.log('🔄 Обновление списка сообществ после возврата');
+        console.log('Обновление списка сообществ после возврата');
         loadUserCommunities();
       }
     };
@@ -99,7 +99,7 @@ const CommunitiesPage: React.FC = () => {
   useEffect(() => {
     const state = location.state as { reload?: boolean } | null;
     if (state?.reload && isAuthenticated && userId) {
-      console.log('🔄 Принудительная перезагрузка списка сообществ после OAuth');
+      console.log('Принудительная перезагрузка списка сообществ после OAuth');
       loadUserCommunities();
       // Очищаем state чтобы не перезагружать повторно
       window.history.replaceState({}, document.title);
@@ -170,7 +170,7 @@ const CommunitiesPage: React.FC = () => {
 
         {error && !loading && communities.length === 0 && (
           <div className="communities-empty">
-            <div className="empty-icon">📭</div>
+            <div className="empty-icon"></div>
             <h3>Сообществ пока нет</h3>
             <p>{error}</p>
             <p className="empty-hint">

@@ -52,12 +52,64 @@ body {
   background: var(--color-bg-light);
   min-height: 100vh;
   color: var(--color-text-dark);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode CSS variables override */
+body.dark-mode {
+  /* Основные цвета фона для темной темы */
+  --color-bg-primary: #0f0f23;
+  --color-bg-secondary: #1a1a2e;
+  --color-bg-tertiary: #16213e;
+  --color-bg-light: #0f0f23;
+  --color-bg-white: rgba(255, 255, 255, 0.05);
+  --color-bg-accent: rgba(139, 92, 246, 0.1);
+  --color-bg-button: #8b5cf6;
+  --color-bg-light-blue: rgba(139, 92, 246, 0.05);
+  --color-bg-blue-light: rgba(139, 92, 246, 0.1);
+
+  /* Цвета текста для темной темы */
+  --color-text-primary: #ffffff;
+  --color-text-secondary: #e0e0e0;
+  --color-text-tertiary: #b0b0b0;
+  --color-text-dark: #ffffff;
+  --color-text-white: #ffffff;
+
+  /* Цвета границ для темной темы */
+  --color-border-light: rgba(139, 92, 246, 0.2);
+  --color-border-medium: rgba(139, 92, 246, 0.3);
+  --color-border-dark: rgba(139, 92, 246, 0.4);
+
+  /* Акцентные цвета для темной темы */
+  --color-accent: #8b5cf6;
+  --color-accent-hover: #a855f7;
+  --color-success: #22c55e;
+  --color-error: #ef4444;
+  --color-warning: #f59e0b;
+
+  /* Тени для темной темы */
+  --shadow-sm: 0 2px 4px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 8px rgba(0, 0, 0, 0.4);
+  --shadow-lg: 0 8px 16px rgba(0, 0, 0, 0.5);
+
+  /* Применяем темную тему к body */
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
 }
 
 .App {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+  background: var(--color-bg-light);
+  color: var(--color-text-dark);
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+/* Dark mode for App */
+body.dark-mode .App {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
 }
 
 .app-header {

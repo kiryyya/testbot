@@ -30,7 +30,7 @@
   height: 64px;
   border-radius: 12px;
   object-fit: cover;
-  border: 2px solid #f0f0f0;
+  border: 2px solid var(--color-border-light);
 }
 
 .community-avatar-placeholder {
@@ -70,19 +70,19 @@
 }
 
 .badge.verified {
-  background: #4caf50;
+  background: var(--color-success);
 }
 
 .badge.open {
-  background: #2196f3;
+  background: var(--color-accent);
 }
 
 .badge.closed {
-  background: #ff9800;
+  background: var(--color-warning);
 }
 
 .badge.private {
-  background: #f44336;
+  background: var(--color-error);
 }
 
 .community-info {

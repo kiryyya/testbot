@@ -382,13 +382,20 @@ body.dark-mode {
   color: inherit;
 }
 
-.dark-mode h1, .dark-mode h2, .dark-mode h3, 
-.dark-mode h4, .dark-mode h5, .dark-mode h6 {
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
   color: #ffffff !important;
 }
 
-.dark-mode p, .dark-mode span, .dark-mode div, 
-.dark-mode label, .dark-mode small {
+.dark-mode p,
+.dark-mode span,
+.dark-mode div,
+.dark-mode label,
+.dark-mode small {
   color: #e0e0e0 !important;
 }
 
@@ -402,6 +409,14 @@ body.dark-mode {
 .dark-mode .community-card,
 .dark-mode .post-card {
   color: #e0e0e0 !important;
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .community-card:hover,
+.dark-mode .post-card:hover {
+  background: rgba(255, 255, 255, 0.08) !important;
+  border-color: rgba(139, 92, 246, 0.4) !important;
 }
 
 .dark-mode .community-card h3,
@@ -421,6 +436,8 @@ body.dark-mode {
 
 .dark-mode .sidebar {
   color: #e0e0e0 !important;
+  background: rgba(15, 15, 35, 0.95) !important;
+  border-right: 1px solid rgba(139, 92, 246, 0.2) !important;
 }
 
 .dark-mode .sidebar h3,
@@ -433,17 +450,215 @@ body.dark-mode {
   color: #e0e0e0 !important;
 }
 
+/* Стили для основных страниц */
+.dark-mode .game-settings-page {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .game-settings-page .settings-section {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .game-settings-page .message {
+  background: rgba(15, 15, 35, 0.9) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .communities-page {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .communities-page .communities-header {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .communities-page .communities-grid {
+  background: transparent !important;
+}
+
+.dark-mode .community-detail-page {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .community-detail-page .community-header {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Стили для Layout */
+.dark-mode .layout {
+  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .layout-main {
+  background: transparent !important;
+}
+
+.dark-mode .layout-content {
+  background: transparent !important;
+}
+
+/* Стили для кнопок */
+.dark-mode .btn,
+.dark-mode .button {
+  background: rgba(139, 92, 246, 0.2) !important;
+  color: #8b5cf6 !important;
+  border: 1px solid rgba(139, 92, 246, 0.3) !important;
+}
+
+.dark-mode .btn:hover,
+.dark-mode .button:hover {
+  background: rgba(139, 92, 246, 0.3) !important;
+  color: #a855f7 !important;
+}
+
+.dark-mode .btn-primary {
+  background: #8b5cf6 !important;
+  color: #ffffff !important;
+  border: none !important;
+}
+
+.dark-mode .btn-primary:hover {
+  background: #a855f7 !important;
+}
+
+/* Стили для форм */
+.dark-mode .form-group,
+.dark-mode .input-group {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .form-control,
+.dark-mode input,
+.dark-mode textarea,
+.dark-mode select {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .form-control:focus,
+.dark-mode input:focus,
+.dark-mode textarea:focus,
+.dark-mode select:focus {
+  border-color: #8b5cf6 !important;
+  box-shadow: 0 0 0 2px rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .form-label,
+.dark-mode .label {
+  color: #e0e0e0 !important;
+}
+
+/* Стили для модальных окон */
+.dark-mode .modal-overlay {
+  background: rgba(0, 0, 0, 0.8) !important;
+}
+
+.dark-mode .modal-content {
+  background: rgba(15, 15, 35, 0.95) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  backdrop-filter: blur(20px) !important;
+}
+
+.dark-mode .modal-header {
+  border-bottom: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .modal-footer {
+  border-top: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+/* Стили для таблиц */
+.dark-mode .table {
+  background: rgba(255, 255, 255, 0.05) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+}
+
+.dark-mode .table th,
+.dark-mode .table td {
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .table th {
+  background: rgba(139, 92, 246, 0.1) !important;
+  color: #ffffff !important;
+}
+
+/* Стили для навигации */
+.dark-mode .nav-link {
+  color: #e0e0e0 !important;
+}
+
+.dark-mode .nav-link:hover {
+  color: #8b5cf6 !important;
+}
+
+.dark-mode .nav-link.active {
+  color: #8b5cf6 !important;
+  background: rgba(139, 92, 246, 0.1) !important;
+}
+
+/* Стили для уведомлений */
+.dark-mode .notification,
+.dark-mode .alert,
+.dark-mode .message {
+  background: rgba(15, 15, 35, 0.9) !important;
+  border: 1px solid rgba(139, 92, 246, 0.2) !important;
+  color: #ffffff !important;
+}
+
+.dark-mode .notification.success,
+.dark-mode .alert.success {
+  background: rgba(34, 197, 94, 0.1) !important;
+  border-color: rgba(34, 197, 94, 0.3) !important;
+  color: #22c55e !important;
+}
+
+.dark-mode .notification.error,
+.dark-mode .alert.error {
+  background: rgba(239, 68, 68, 0.1) !important;
+  border-color: rgba(239, 68, 68, 0.3) !important;
+  color: #ef4444 !important;
+}
+
+/* Стили для загрузки */
+.dark-mode .loading {
+  color: #8b5cf6 !important;
+}
+
+.dark-mode .spinner {
+  border-color: rgba(139, 92, 246, 0.2) !important;
+  border-top-color: #8b5cf6 !important;
+}
+
 /* Принудительное применение цветов */
 .dark-mode *:not(button):not(input):not(textarea):not(select) {
   color: inherit;
 }
 
-.dark-mode h1, .dark-mode h2, .dark-mode h3, 
-.dark-mode h4, .dark-mode h5, .dark-mode h6 {
+.dark-mode h1,
+.dark-mode h2,
+.dark-mode h3,
+.dark-mode h4,
+.dark-mode h5,
+.dark-mode h6 {
   color: #ffffff !important;
 }
 
-.dark-mode p, .dark-mode span, .dark-mode div, 
-.dark-mode label, .dark-mode small, .dark-mode strong {
+.dark-mode p,
+.dark-mode span,
+.dark-mode div,
+.dark-mode label,
+.dark-mode small,
+.dark-mode strong {
   color: #e0e0e0 !important;
 }

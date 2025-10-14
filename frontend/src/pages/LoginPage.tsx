@@ -59,10 +59,10 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
         <div className="stats-container">
           <div className="stat-card">
             <div className="stat-header">
-              <div className="stat-icon">📈</div>
+              <div className="stat-icon">📊</div>
               <div className="stat-controls">
                 <span>□</span>
-                <span>✏️</span>
+                <span>✏</span>
                 <span>⋯</span>
               </div>
             </div>
@@ -87,7 +87,7 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
 
           <div className="stat-card">
             <div className="stat-avatar">
-              <div className="avatar-image">👨‍💼</div>
+              <div className="avatar-image">👤</div>
             </div>
             <div className="stat-content">
               <div className="stat-number">500+</div>

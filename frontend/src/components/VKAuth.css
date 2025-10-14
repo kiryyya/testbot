@@ -11,7 +11,7 @@
   background: none;
   border: none;
   font-size: 24px;
-  color: #666;
+  color: var(--color-text-secondary);
   cursor: pointer;
   width: 30px;
   height: 30px;
@@ -23,8 +23,8 @@
 }
 
 .close-modal-btn:hover {
-  background: #f0f0f0;
-  color: #333;
+  background: var(--color-bg-light);
+  color: var(--color-text-dark);
 }
 
 .auth-container {
@@ -44,7 +44,7 @@
   flex-direction: column;
   align-items: center;
   padding: 20px;
-  color: #64748b;
+  color: var(--color-text-secondary);
 }
 
 .loading {
@@ -380,7 +380,7 @@
 }
 
 .friend-card {
-  background: white;
+  background: var(--color-bg-white);
   border-radius: 8px;
   padding: 15px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);

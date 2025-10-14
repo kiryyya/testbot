@@ -369,11 +369,29 @@ const handleNewMessage = async (message, group_id) => {
       return;
     }
     
-    // Проверяем, является ли сообщение запросом приза
-    if (message.text && message.text.toLowerCase().trim() === 'приз') {
-      console.log('🎁 Получен запрос на приз от пользователя:', message.from_id);
-      await handlePrizeRequest(message.from_id, accessToken, group_id);
-      return;
+    // Проверяем, является ли сообщение запросом приза по любому из ключевых слов
+    if (message.text) {
+      const messageText = message.text.toLowerCase().trim();
+      console.log('🔍 Проверяем ключевое слово приза:', messageText);
+      
+      // Ищем пост с таким ключевым словом
+      const prizeKeywordQuery = `
+        SELECT post_id, prize_keyword FROM post_game_settings 
+        WHERE prize_keyword = $1 AND game_enabled = true
+      `;
+      
+      const keywordResult = await pool.query(prizeKeywordQuery, [messageText]);
+      
+      if (keywordResult.rows.length > 0) {
+        const postSettings = keywordResult.rows[0];
+        console.log('🎁 Найден пост с ключевым словом:', {
+          post_id: postSettings.post_id,
+          keyword: postSettings.prize_keyword,
+          user_id: message.from_id
+        });
+        await handlePrizeRequest(message.from_id, accessToken, group_id, postSettings.post_id);
+        return;
+      }
     }
     
     // Сохраняем сообщение в базу данных
@@ -438,20 +456,33 @@ const handleNewMessage = async (message, group_id) => {
 };
 
 // Функция обработки запроса приза
-const handlePrizeRequest = async (vkUserId, accessToken, groupId) => {
+const handlePrizeRequest = async (vkUserId, accessToken, groupId, postId = null) => {
   try {
-    console.log('🎁 Обрабатываем запрос приза для пользователя:', vkUserId);
+    console.log('🎁 Обрабатываем запрос приза для пользователя:', vkUserId, 'для поста:', postId);
     
-    // Проверяем, есть ли игрок в базе и победил ли он
-    const playerQuery = `
-      SELECT * FROM vk_players 
-      WHERE vk_user_id = $1 AND attempts_left <= 0 AND lives_count <= 0
-    `;
+    // Если указан конкретный пост, проверяем победу только в нем
+    // Иначе проверяем победу в любом посте
+    let playerQuery;
+    let queryParams;
     
-    const playerResult = await pool.query(playerQuery, [vkUserId]);
+    if (postId) {
+      playerQuery = `
+        SELECT * FROM post_players 
+        WHERE vk_user_id = $1 AND post_id = $2 AND attempts_left <= 0 AND lives_count <= 0 AND has_won = true
+      `;
+      queryParams = [vkUserId, postId];
+    } else {
+      playerQuery = `
+        SELECT * FROM post_players 
+        WHERE vk_user_id = $1 AND attempts_left <= 0 AND lives_count <= 0 AND has_won = true
+      `;
+      queryParams = [vkUserId];
+    }
+    
+    const playerResult = await pool.query(playerQuery, queryParams);
     
     if (playerResult.rows.length === 0) {
-      console.log('❌ Пользователь не имеет права на приз:', vkUserId);
+      console.log('❌ Пользователь не имеет права на приз:', vkUserId, 'для поста:', postId);
       await sendMessage(vkUserId, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, groupId);
       return;
     }
@@ -459,15 +490,17 @@ const handlePrizeRequest = async (vkUserId, accessToken, groupId) => {
     const player = playerResult.rows[0];
     console.log('✅ Пользователь имеет право на приз:', {
       vk_user_id: player.vk_user_id,
+      post_id: player.post_id,
       total_score: player.total_score,
       attempts_left: player.attempts_left,
-      lives_count: player.lives_count
+      lives_count: player.lives_count,
+      has_won: player.has_won
     });
     
     // Отправляем купон
     await sendMessage(vkUserId, 'купон', accessToken, groupId);
     
-    console.log('🎉 Купон отправлен пользователю:', vkUserId);
+    console.log('🎉 Купон отправлен пользователю:', vkUserId, 'за победу в посте:', player.post_id);
     
   } catch (error) {
     console.error('❌ Ошибка при обработке запроса приза:', error);
@@ -1928,11 +1961,11 @@ app.get('/api/posts/:postId/game', async (req, res) => {
 app.put('/api/posts/:postId/game', async (req, res) => {
   try {
     const postId = req.params.postId; // Оставляем как строку, например "-232533026_161"
-    const { game_enabled, attempts_per_player = 5, lives_per_player = 100 } = req.body;
+    const { game_enabled, attempts_per_player = 5, lives_per_player = 100, prize_keyword = 'приз' } = req.body;
     
-    console.log('📝 Обновление настроек игры для поста:', { postId, game_enabled, attempts_per_player, lives_per_player });
+    console.log('📝 Обновление настроек игры для поста:', { postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword });
     
-    const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player);
+    const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword);
     
     res.json({
       success: true,

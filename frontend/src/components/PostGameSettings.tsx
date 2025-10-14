@@ -12,6 +12,7 @@ interface GameSettings {
   game_enabled: boolean;
   attempts_per_player: number;
   lives_per_player: number;
+  prize_keyword: string;
 }
 
 const PostGameSettings: React.FC<PostGameSettingsProps> = ({ postId, onClose }) => {
@@ -54,7 +55,8 @@ const PostGameSettings: React.FC<PostGameSettingsProps> = ({ postId, onClose }) 
       const response = await apiService.updatePostGameSettings(postId, {
         game_enabled: settings.game_enabled,
         attempts_per_player: settings.attempts_per_player,
-        lives_per_player: settings.lives_per_player
+        lives_per_player: settings.lives_per_player,
+        prize_keyword: settings.prize_keyword
       });
 
       if (response.success) {
@@ -169,6 +171,23 @@ const PostGameSettings: React.FC<PostGameSettingsProps> = ({ postId, onClose }) 
                     />
                     <p className="setting-description">
                       Сколько жизней будет у каждого игрока (по умолчанию: 100)
+                    </p>
+                  </div>
+
+                  <div className="setting-item">
+                    <label className="setting-label">
+                      Ключевое слово для приза:
+                    </label>
+                    <input
+                      type="text"
+                      value={settings.prize_keyword}
+                      onChange={(e) => handleChange('prize_keyword', e.target.value)}
+                      className="setting-input"
+                      placeholder="приз"
+                      maxLength={50}
+                    />
+                    <p className="setting-description">
+                      Слово, которое пользователь должен отправить в ЛС для получения приза (по умолчанию: "приз")
                     </p>
                   </div>
                 </>

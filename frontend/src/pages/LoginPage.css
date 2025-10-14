@@ -1,7 +1,12 @@
 /* Modern Landing Page Design */
 .login-page {
   min-height: 100vh;
-  background: linear-gradient(180deg, #f9fafe 0%, #f2f6ff 50%, #e9effd 100%);
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-secondary) 0%,
+    var(--color-bg-light) 50%,
+    var(--color-bg-light-blue) 100%
+  );
   font-family: 'Inter', 'Montserrat', 'Helvetica Neue', Arial, sans-serif;
   position: relative;
   overflow-x: hidden;
@@ -11,27 +16,32 @@
 
 /* Dark Mode Styles */
 .login-page.dark-mode {
-  background: linear-gradient(180deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
-  color: #ffffff;
+  background: linear-gradient(
+    180deg,
+    var(--color-bg-primary) 0%,
+    var(--color-bg-secondary) 50%,
+    var(--color-bg-tertiary) 100%
+  );
+  color: var(--color-text-white);
 }
 
 .login-page.dark-mode .hero-title {
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .login-page.dark-mode .hero-description {
-  color: #e0e0e0;
+  color: var(--color-text-secondary);
 }
 
 .login-page.dark-mode .stat-card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: var(--color-bg-white);
+  border: 1px solid var(--color-border-light);
   backdrop-filter: blur(10px);
 }
 
 .login-page.dark-mode .stat-card:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(139, 92, 246, 0.4);
+  background: var(--color-bg-accent);
+  border-color: var(--color-accent);
 }
 
 .login-page.dark-mode .login-header {
@@ -40,62 +50,62 @@
 }
 
 .login-page.dark-mode .login-header.scrolled {
-  background: rgba(15, 15, 35, 0.95);
-  border-bottom: 1px solid rgba(139, 92, 246, 0.2);
+  background: var(--color-bg-primary);
+  border-bottom: 1px solid var(--color-border-light);
 }
 
 .login-page.dark-mode .logo-text {
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .login-page.dark-mode .nav-link {
-  color: #e0e0e0;
+  color: var(--color-text-secondary);
 }
 
 .login-page.dark-mode .nav-link:hover {
-  color: #8b5cf6;
+  color: var(--color-accent);
 }
 
 .login-page.dark-mode .login-btn {
-  color: #e0e0e0;
-  border-color: rgba(139, 92, 246, 0.3);
+  color: var(--color-text-secondary);
+  border-color: var(--color-border-medium);
 }
 
 .login-page.dark-mode .login-btn:hover {
-  background: rgba(139, 92, 246, 0.1);
+  background: var(--color-bg-accent);
 }
 
 .login-page.dark-mode .signup-btn {
-  background: #8b5cf6;
-  color: #ffffff;
+  background: var(--color-accent);
+  color: var(--color-text-white);
 }
 
 .login-page.dark-mode .signup-btn:hover {
-  background: #a855f7;
+  background: var(--color-accent-hover);
 }
 
 .login-page.dark-mode .login-form-container {
-  background: rgba(15, 15, 35, 0.95);
-  border: 1px solid rgba(139, 92, 246, 0.2);
+  background: var(--color-bg-primary);
+  border: 1px solid var(--color-border-light);
   backdrop-filter: blur(20px);
 }
 
 .login-page.dark-mode .login-form-container h2 {
-  color: #ffffff;
+  color: var(--color-text-white);
 }
 
 .login-page.dark-mode .auth-description {
-  color: #e0e0e0;
+  color: var(--color-text-secondary);
 }
 
 .login-page.dark-mode .close-modal-btn {
-  background: rgba(139, 92, 246, 0.2);
-  color: #8b5cf6;
+  background: var(--color-bg-accent);
+  color: var(--color-accent);
 }
 
 .login-page.dark-mode .close-modal-btn:hover {
-  background: rgba(139, 92, 246, 0.3);
-  color: #a855f7;
+  background: var(--color-bg-button);
+  color: var(--color-accent-hover);
 }
 
 .login-page.dark-mode .stat-number {
