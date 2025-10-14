@@ -612,6 +612,17 @@ const getPostGameSettings = async (postId) => {
 // Функция для создания/обновления настроек игры поста
 const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100, prizeKeyword = 'приз', promoCodes = []) => {
   try {
+    console.log('💾 Сохранение настроек игры:', {
+      postId,
+      gameEnabled,
+      attemptsPerPlayer,
+      livesPerPlayer,
+      prizeKeyword,
+      promoCodes,
+      promoCodesType: typeof promoCodes,
+      promoCodesLength: promoCodes?.length
+    });
+    
     const query = `
       INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player, prize_keyword, promo_codes)
       VALUES ($1, $2, $3, $4, $5, $6)
@@ -626,6 +637,7 @@ const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, l
       RETURNING *
     `;
     const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer, prizeKeyword, promoCodes]);
+    console.log('✅ Настройки игры сохранены:', result.rows[0]);
     return result.rows[0];
   } catch (error) {
     console.error('❌ Ошибка при настройке игры поста:', error);

@@ -73,7 +73,8 @@ const PostGameSettingsPage: React.FC = () => {
         game_enabled: settings.game_enabled,
         attempts_per_player: settings.attempts_per_player,
         lives_per_player: settings.lives_per_player,
-        prize_keyword: settings.prize_keyword
+        prize_keyword: settings.prize_keyword,
+        promo_codes: settings.promo_codes || []
       });
 
       if (response.success) {
