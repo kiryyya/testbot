@@ -628,7 +628,15 @@ const handleWallComment = async (commentData, groupId) => {
     // 4. Проверяем, есть ли у игрока попытки для этого поста
     if (player.attempts_left <= 0) {
       console.log('🚫 У игрока закончились попытки для этого поста, больше не может участвовать');
-      // Попытки закончились - больше не отвечаем и не обрабатываем
+      
+      // Если игрок проиграл (нет попыток и не выиграл), отправляем сообщение о проигрыше
+      if (!player.has_won) {
+        console.log('💔 Игрок проиграл, отправляем сообщение о проигрыше');
+        await replyToComment(commentData, groupId, player, false, 0, true); // false = не победа, true = попытки закончились
+        return;
+      }
+      
+      // Если попытки закончились, но игрок выиграл - не отвечаем (уже обработано выше)
       return;
     }
     
@@ -703,7 +711,7 @@ const handleWallComment = async (commentData, groupId) => {
 };
 
 // Функция для генерации текста ответа через GPT
-const generateReplyText = async (originalText, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false, groupId = null) => {
+const generateReplyText = async (originalText, playerData = null, isVictory = false, livesLost = 0, attemptsFinished = false, groupId = null, postId = null) => {
   try {
     console.log('🤖 Генерация текста ответа через GPT:', {
       originalText: originalText.substring(0, 100) + '...',
@@ -715,10 +723,21 @@ const generateReplyText = async (originalText, playerData = null, isVictory = fa
     });
     
     // Если победа - возвращаем фиксированный текст с ссылкой на ЛС сообщества
-    if (isVictory && groupId) {
-      const victoryText = `🎉 Поздравляем! Вы выиграли!\n\nДля получения приза отправьте ключевое слово в ЛС сообщества по ссылке:\nhttps://vk.me/club${groupId}`;
+    if (isVictory && groupId && postId) {
+      // Получаем настройки поста для получения prize_keyword
+      const postSettings = await getPostGameSettings(postId);
+      const prizeKeyword = postSettings?.prize_keyword || 'приз';
+      
+      const victoryText = `🏆 Поздравляем! Вы одержали победу в этом сражении!\n\nДля получения приза отправьте ключевое слово "${prizeKeyword}" в личные сообщения сообщества по ссылке:\nhttps://vk.me/club${groupId}\n\nА пока ждите следующего сражения! ⚔️✨`;
       console.log('✅ Текст победы сформирован:', victoryText);
       return victoryText;
+    }
+    
+    // Если проигрыш (попытки закончились) - возвращаем фиксированный текст
+    if (attemptsFinished && !isVictory) {
+      const defeatText = `💔 К сожалению, вы проиграли в этом сражении.\n\nНе расстраивайтесь! Впереди еще много интересных сражений и призов! 🗡️✨`;
+      console.log('✅ Текст проигрыша сформирован:', defeatText);
+      return defeatText;
     }
 
     // Формируем контекст для GPT
@@ -787,7 +806,7 @@ const generateReplyText = async (originalText, playerData = null, isVictory = fa
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt }
       ],
-      max_tokens: 20,
+      max_tokens: 350,
       temperature: 0.9 // Увеличиваем температуру для большей креативности
     });
 
@@ -868,7 +887,7 @@ const replyToComment = async (commentData, groupId, playerData = null, isVictory
     const originalText = commentData.text || '';
     
     console.log('🤖 Генерируем ответ на комментарий...');
-    const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished, groupId);
+    const autoReplyText = await generateReplyText(originalText, playerData, isVictory, livesLost, attemptsFinished, groupId, commentData.post_id);
     
     // Формируем текст ответа с игровой статистикой
     let replyText;
