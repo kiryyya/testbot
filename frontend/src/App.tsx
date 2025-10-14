@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage';
 import CommunitiesPage from './pages/CommunitiesPage';
 import CommunityDetailPage from './pages/CommunityDetailPage';
 import GameSettingsPage from './pages/GameSettingsPage';
+import PostGameSettingsPage from './pages/PostGameSettingsPage';
 import LoginPage from './pages/LoginPage';
 import VKAuthCallbackPage from './pages/VKAuthCallbackPage';
 import { useAppDispatch, useAppSelector } from './store';
@@ -84,6 +85,7 @@ function App() {
             <Route path="/" element={<Layout onLogout={handleLogout} />}>
               {/* <Route index element={<HomePage />} /> */}
               <Route path="game-settings" element={<GameSettingsPage />} />
+              <Route path="post/:postId/game-settings" element={<PostGameSettingsPage />} />
               <Route path="communities" element={<CommunitiesPage />} />
               <Route path="communities/:communityId" element={<CommunityDetailPage />} />
               <Route path="vk-messages" element={<div style={{padding: '30px'}}><h2>VK Сообщения</h2><p>Страница в разработке...</p></div>} />

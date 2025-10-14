@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { useNavigate } from 'react-router-dom';
 import { VKPost, formatPostDate, getAttachmentTypeText } from '../services/vkApi';
-import PostGameSettings from './PostGameSettings';
 import './PostCard.css';
 
 interface PostCardProps {
@@ -8,7 +8,7 @@ interface PostCardProps {
 }
 
 const PostCard: React.FC<PostCardProps> = ({ post }) => {
-  const [showGameSettings, setShowGameSettings] = useState(false);
+  const navigate = useNavigate();
 
   // Обработка текста поста
   const formatPostText = (text: string): string => {
@@ -224,21 +224,13 @@ const PostCard: React.FC<PostCardProps> = ({ post }) => {
       {/* Кнопка управления игрой */}
       <div className="post-actions">
         <button
-          onClick={() => setShowGameSettings(true)}
+          onClick={() => navigate(`/post/${post.id}/game-settings`)}
           className="game-settings-btn"
           title="Настройки игры для этого поста"
         >
-          🎮 Настройки игры
+          Настройки игры
         </button>
       </div>
-
-      {/* Модальное окно настроек игры */}
-      {showGameSettings && (
-        <PostGameSettings
-          postId={post.id}
-          onClose={() => setShowGameSettings(false)}
-        />
-      )}
     </div>
   );
 };
