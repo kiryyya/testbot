@@ -384,36 +384,40 @@ const handleNewMessage = async (message, group_id) => {
       console.log('🔍 Посты с ключевым словом:', keywordResult.rows);
       
       if (keywordResult.rows.length > 0) {
-        const postSettings = keywordResult.rows[0];
-        console.log('🎁 Найден пост с ключевым словом:', {
-          post_id: postSettings.post_id,
-          keyword: postSettings.prize_keyword,
-          user_id: message.from_id
-        });
+        console.log('🔍 Найдено постов с ключевым словом:', keywordResult.rows.length);
         
-        // Теперь проверяем, выиграл ли пользователь именно в этом посте
-        const userWinQuery = `
-          SELECT * FROM post_players 
-          WHERE vk_user_id = $1 AND post_id = $2 AND has_won = true
-        `;
-        
-        const userWinResult = await pool.query(userWinQuery, [message.from_id, postSettings.post_id]);
-        console.log('🏆 Проверка победы пользователя в посте:', {
-          user_id: message.from_id,
-          post_id: postSettings.post_id,
-          found: userWinResult.rows.length > 0,
-          rows: userWinResult.rows
-        });
-        
-        if (userWinResult.rows.length > 0) {
-          console.log('🎁 Пользователь выиграл в этом посте, отправляем приз');
-          await handlePrizeRequest(message.from_id, accessToken, group_id, postSettings.post_id);
-          return;
-        } else {
-          console.log('❌ Пользователь не выиграл в этом посте');
-          await sendMessage(message.from_id, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, group_id);
-          return;
+        // Проверяем каждый пост с таким ключевым словом
+        for (const postSettings of keywordResult.rows) {
+          console.log('🎁 Проверяем пост:', {
+            post_id: postSettings.post_id,
+            keyword: postSettings.prize_keyword,
+            user_id: message.from_id
+          });
+          
+          // Проверяем, выиграл ли пользователь именно в этом посте
+          const userWinQuery = `
+            SELECT * FROM post_players 
+            WHERE vk_user_id = $1 AND post_id = $2 AND has_won = true
+          `;
+          
+          const userWinResult = await pool.query(userWinQuery, [message.from_id, postSettings.post_id]);
+          console.log('🏆 Проверка победы пользователя в посте:', {
+            user_id: message.from_id,
+            post_id: postSettings.post_id,
+            found: userWinResult.rows.length > 0,
+            rows: userWinResult.rows
+          });
+          
+          if (userWinResult.rows.length > 0) {
+            console.log('🎁 Пользователь выиграл в этом посте, отправляем приз');
+            await handlePrizeRequest(message.from_id, accessToken, group_id, postSettings.post_id);
+            return;
+          }
         }
+        
+        console.log('❌ Пользователь не выиграл ни в одном посте с таким ключевым словом');
+        await sendMessage(message.from_id, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, group_id);
+        return;
       } else {
         console.log('❌ Пост с ключевым словом не найден:', messageText);
       }
