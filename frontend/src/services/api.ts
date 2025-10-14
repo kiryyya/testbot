@@ -55,6 +55,7 @@ export const apiService = {
     attempts_per_player?: number;
     lives_per_player?: number;
     prize_keyword?: string;
+    promo_codes?: string[];
   }): Promise<ApiResponse<any>> => {
     const response = await api.put(`/posts/${postId}/game`, settings);
     return response.data;

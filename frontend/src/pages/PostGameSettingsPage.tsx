@@ -8,6 +8,7 @@ interface GameSettings {
   attempts_per_player: number;
   lives_per_player: number;
   prize_keyword: string;
+  promo_codes: string[];
 }
 
 const PostGameSettingsPage: React.FC = () => {
@@ -18,8 +19,11 @@ const PostGameSettingsPage: React.FC = () => {
     game_enabled: false,
     attempts_per_player: 5,
     lives_per_player: 100,
-    prize_keyword: 'приз'
+    prize_keyword: 'приз',
+    promo_codes: []
   });
+  
+  const [newPromoCode, setNewPromoCode] = useState('');
   
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -37,7 +41,14 @@ const PostGameSettingsPage: React.FC = () => {
       const response = await apiService.getPostGameSettings(parseInt(postId));
       
       if (response.success) {
-        setSettings(response.data);
+        const data = response.data;
+        setSettings({
+          game_enabled: data.game_enabled || false,
+          attempts_per_player: data.attempts_per_player || 5,
+          lives_per_player: data.lives_per_player || 100,
+          prize_keyword: data.prize_keyword || 'приз',
+          promo_codes: data.promo_codes || []
+        });
       } else {
         setError('Ошибка при загрузке настроек');
       }
@@ -87,6 +98,23 @@ const PostGameSettingsPage: React.FC = () => {
     setSettings(prev => ({
       ...prev,
       [field]: value
+    }));
+  };
+
+  const addPromoCode = () => {
+    if (newPromoCode.trim() && !(settings.promo_codes || []).includes(newPromoCode.trim())) {
+      setSettings(prev => ({
+        ...prev,
+        promo_codes: [...(prev.promo_codes || []), newPromoCode.trim()]
+      }));
+      setNewPromoCode('');
+    }
+  };
+
+  const removePromoCode = (index: number) => {
+    setSettings(prev => ({
+      ...prev,
+      promo_codes: (prev.promo_codes || []).filter((_, i) => i !== index)
     }));
   };
 
@@ -177,6 +205,46 @@ const PostGameSettingsPage: React.FC = () => {
             {/* <div className="setting-hint">
               Пользователи должны отправить это слово в личные сообщения для получения приза
             </div> */}
+          </div>
+
+          <div className="setting-group">
+            <label className="setting-label">
+              Промокоды:
+              <div className="promo-codes-container">
+                <div className="promo-codes-input">
+                  <input
+                    type="text"
+                    value={newPromoCode}
+                    onChange={(e) => setNewPromoCode(e.target.value)}
+                    className="text-input"
+                    placeholder="Введите промокод"
+                    onKeyPress={(e) => e.key === 'Enter' && addPromoCode()}
+                  />
+                  <button
+                    type="button"
+                    onClick={addPromoCode}
+                    className="add-promo-button"
+                    disabled={!newPromoCode.trim()}
+                  >
+                    ✓
+                  </button>
+                </div>
+                <div className="promo-codes-list">
+                  {(settings.promo_codes || []).map((code, index) => (
+                    <div key={index} className="promo-code-item">
+                      <span className="promo-code-text">{code}</span>
+                      <button
+                        type="button"
+                        onClick={() => removePromoCode(index)}
+                        className="remove-promo-button"
+                      >
+                        ✕
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </label>
           </div>
 
           <div className="settings-actions">

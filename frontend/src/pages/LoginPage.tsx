@@ -35,17 +35,13 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
       {/* Hero Section */}
       <section className="hero-section">
         <div className="hero-content">
-          <div className="hero-badge">
-            <span>10,000+ КОМАНД ПО ВСЕМУ МИРУ</span>
-          </div>
+         
           
           <h1 className="hero-title">
             Ускорьте работу с <span className="highlight">умной автоматизацией AI</span>
           </h1>
           
-          <p className="hero-description">
-            Ускоряйте закрытие сделок с помощью AI-инсайтов, прогнозной аналитики и бесшовных рабочих процессов — все на доверенной платформе.
-          </p>
+        
           
           {/* <div className="hero-actions">
             <button className="cta-primary">Начать бесплатно</button>

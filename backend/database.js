@@ -236,6 +236,7 @@ const createTable = async () => {
         attempts_per_player INTEGER DEFAULT 5,
         lives_per_player INTEGER DEFAULT 100,
         prize_keyword VARCHAR(50) DEFAULT 'приз',
+        promo_codes TEXT[] DEFAULT '{}',
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       );
@@ -295,6 +296,17 @@ const createTable = async () => {
 
     await pool.query(postGameSettingsQuery);
     console.log('✅ Таблица post_game_settings создана или уже существует');
+    
+    // Миграция: добавление поля promo_codes
+    try {
+      await pool.query(`
+        ALTER TABLE post_game_settings 
+        ADD COLUMN IF NOT EXISTS promo_codes TEXT[] DEFAULT '{}'
+      `);
+      console.log('✅ Миграция promo_codes выполнена');
+    } catch (error) {
+      console.log('ℹ️ Поле promo_codes уже существует или ошибка миграции:', error.message);
+    }
 
     await pool.query(postPlayersQuery);
     console.log('✅ Таблица post_players создана или уже существует');
@@ -598,21 +610,22 @@ const getPostGameSettings = async (postId) => {
 };
 
 // Функция для создания/обновления настроек игры поста
-const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100, prizeKeyword = 'приз') => {
+const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100, prizeKeyword = 'приз', promoCodes = []) => {
   try {
     const query = `
-      INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player, prize_keyword)
-      VALUES ($1, $2, $3, $4, $5)
-      ON CONFLICT (post_id) 
-      DO UPDATE SET 
+      INSERT INTO post_game_settings (post_id, game_enabled, attempts_per_player, lives_per_player, prize_keyword, promo_codes)
+      VALUES ($1, $2, $3, $4, $5, $6)
+      ON CONFLICT (post_id)
+      DO UPDATE SET
         game_enabled = $2,
         attempts_per_player = $3,
         lives_per_player = $4,
         prize_keyword = $5,
+        promo_codes = $6,
         updated_at = CURRENT_TIMESTAMP
       RETURNING *
     `;
-    const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer, prizeKeyword]);
+    const result = await pool.query(query, [postId, gameEnabled, attemptsPerPlayer, livesPerPlayer, prizeKeyword, promoCodes]);
     return result.rows[0];
   } catch (error) {
     console.error('❌ Ошибка при настройке игры поста:', error);

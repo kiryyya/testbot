@@ -722,13 +722,14 @@ const generateReplyText = async (originalText, playerData = null, isVictory = fa
       groupId
     });
     
-    // Если победа - возвращаем фиксированный текст с ссылкой на ЛС сообщества
+    // Если победа - возвращаем фиксированный текст с промокодом
     if (isVictory && groupId && postId) {
-      // Получаем настройки поста для получения prize_keyword
+      // Получаем настройки поста для получения промокода
       const postSettings = await getPostGameSettings(postId);
-      const prizeKeyword = postSettings?.prize_keyword || 'приз';
+      const promoCodes = postSettings?.promo_codes || [];
+      const promoCode = promoCodes.length > 0 ? promoCodes[0] : 'ПРОМОКОД';
       
-      const victoryText = `🏆 Поздравляем! Вы одержали победу в этом сражении!\n\nДля получения приза отправьте ключевое слово "${prizeKeyword}" в личные сообщения сообщества по ссылке:\nhttps://vk.me/club${groupId}\n\nА пока ждите следующего сражения! ⚔️✨`;
+      const victoryText = `🎉 Поздравляем с победой! 🎉\n\nТы успешно победил монстра за это мы дарим тебе ОООЧЕНЬ ЦЕННЫЙ ПОДАРОК🎁\n\nТвой подарок👉 СЕТ ДУЭТ ВКУСА\nАктивировать подарок можно с помощью промокода: ${promoCode}\n\nПри любом заказе от 1190₽ \nНа нашем сайте: https://fishka-sushi.ru`;
       console.log('✅ Текст победы сформирован:', victoryText);
       return victoryText;
     }
@@ -1993,11 +1994,11 @@ app.get('/api/posts/:postId/game', async (req, res) => {
 app.put('/api/posts/:postId/game', async (req, res) => {
   try {
     const postId = req.params.postId; // Оставляем как строку, например "-232533026_161"
-    const { game_enabled, attempts_per_player = 5, lives_per_player = 100, prize_keyword = 'приз' } = req.body;
+    const { game_enabled, attempts_per_player = 5, lives_per_player = 100, prize_keyword = 'приз', promo_codes = [] } = req.body;
     
-    console.log('📝 Обновление настроек игры для поста:', { postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword });
+    console.log('📝 Обновление настроек игры для поста:', { postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword, promo_codes });
     
-    const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword);
+    const settings = await setPostGameSettings(postId, game_enabled, attempts_per_player, lives_per_player, prize_keyword, promo_codes);
     
     res.json({
       success: true,
