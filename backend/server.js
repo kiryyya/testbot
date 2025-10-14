@@ -486,8 +486,23 @@ const handlePrizeRequest = async (vkUserId, accessToken, groupId, postId = null)
     
     const playerResult = await pool.query(playerQuery, queryParams);
     
+    console.log('🔍 Результат поиска игрока в БД:', {
+      query: playerQuery,
+      params: queryParams,
+      foundRows: playerResult.rows.length,
+      rows: playerResult.rows
+    });
+    
     if (playerResult.rows.length === 0) {
       console.log('❌ Пользователь не имеет права на приз:', vkUserId, 'для поста:', postId);
+      
+      // Дополнительная проверка - покажем все записи этого пользователя
+      const allPlayerRecords = await pool.query(
+        'SELECT * FROM post_players WHERE vk_user_id = $1',
+        [vkUserId]
+      );
+      console.log('📊 Все записи игрока в БД:', allPlayerRecords.rows);
+      
       await sendMessage(vkUserId, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, groupId);
       return;
     }
