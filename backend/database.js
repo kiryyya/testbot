@@ -565,16 +565,19 @@ const checkVictoryConditions = (player) => {
   const hasUsedAllAttempts = player.attempts_left <= 0;
   const hasLost100Lives = player.lives_count <= 0; // Когда жизни закончились, значит потрачено 100+
   
+  // Победа если жизни закончились (независимо от попыток)
+  const isVictory = hasLost100Lives;
+  
   console.log(`🏆 Проверка условий победы:`, {
     user_id: player.vk_user_id,
     attempts_left: player.attempts_left,
     lives_count: player.lives_count,
     hasUsedAllAttempts,
     hasLost100Lives,
-    isVictory: hasUsedAllAttempts && hasLost100Lives
+    isVictory: isVictory
   });
   
-  return hasUsedAllAttempts && hasLost100Lives;
+  return isVictory;
 };
 
 // ===== НОВЫЕ ФУНКЦИИ ДЛЯ ИГРЫ ПО ПОСТАМ =====
