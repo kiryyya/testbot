@@ -403,8 +403,12 @@ const handleNewMessage = async (message, group_id) => {
         }
         
         console.log('❌ Ключевое слово не совпадает ни с одним выигранным постом');
+        await sendMessage(message.from_id, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, group_id);
+        return;
       } else {
         console.log('❌ У пользователя нет выигранных постов');
+        await sendMessage(message.from_id, '❌ Извините, но вы еще не победили в игре! Завершите игру, чтобы получить приз.', accessToken, group_id);
+        return;
       }
     }
     
