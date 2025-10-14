@@ -9,9 +9,29 @@ interface LoginPageProps {
 
 const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
+  const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(true); // Временно показываем модалку с паролем
+  const [password, setPassword] = useState('');
+  const [passwordError, setPasswordError] = useState('');
 
   const handleLoginClick = () => {
-    setIsLoginModalOpen(true);
+    setIsPasswordModalOpen(true);
+  };
+
+  const handleClosePasswordModal = () => {
+    setIsPasswordModalOpen(false);
+  };
+
+  const handlePasswordSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const correctPassword = 'admin789'; // Временный пароль
+    
+    if (password === correctPassword) {
+      setPasswordError('');
+      setIsPasswordModalOpen(false);
+      setIsLoginModalOpen(true);
+    } else {
+      setPasswordError('Неверный пароль');
+    }
   };
 
   const handleCloseModal = () => {
@@ -113,6 +133,39 @@ const LoginPage: React.FC<LoginPageProps> = ({ onVKLogin }) => {
           </div>
         </div>
       </section> */}
+
+      {/* Password Modal */}
+      {isPasswordModalOpen && (
+        <div className="login-form-overlay" onClick={handleClosePasswordModal}>
+          <div className="login-form-container" onClick={(e) => e.stopPropagation()}>
+            <button className="close-modal-btn" onClick={handleClosePasswordModal}>×</button>
+            <div className="password-form-wrapper">
+              <h2>Введите пароль</h2>
+              <p className="auth-description">
+                Для доступа к системе требуется пароль
+              </p>
+              <form onSubmit={handlePasswordSubmit} className="password-form">
+                <div className="form-group">
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    placeholder="Введите пароль"
+                    className="password-input"
+                    required
+                  />
+                  {passwordError && (
+                    <div className="error-message">{passwordError}</div>
+                  )}
+                </div>
+                <button type="submit" className="password-submit-btn">
+                  Войти
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Login Form Modal */}
       {isLoginModalOpen && (
