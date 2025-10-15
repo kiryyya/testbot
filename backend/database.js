@@ -563,10 +563,10 @@ const getPlayerEvents = async (playerId, limit = 50) => {
   }
 };
 
-// Функция для расчета урона жизней (рандомный урон от 10 до 30 жизней за попытку)
+// Функция для расчета урона жизней (рандомный урон от 15 до 40 жизней за попытку)
 const calculateDamage = () => {
-  const minDamage = 10;
-  const maxDamage = 30;
+  const minDamage = 15;
+  const maxDamage = 40;
   const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
   console.log(`🎯 Рандомный урон за попытку: ${damage} жизней (диапазон ${minDamage}-${maxDamage})`);
   return damage;
