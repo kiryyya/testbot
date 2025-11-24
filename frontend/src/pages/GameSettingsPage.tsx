@@ -12,7 +12,7 @@ interface GameSettings {
 const GameSettingsPage: React.FC = () => {
   const [settings, setSettings] = useState<GameSettings>({
     gameEnabled: true,
-    defaultAttempts: 5,
+    defaultAttempts: 3,
     defaultLives: 100,
     autoReplyEnabled: true,
     autoReplyText: 'удачно'
@@ -34,7 +34,7 @@ const GameSettingsPage: React.FC = () => {
         const data = await response.json();
         setSettings({
           gameEnabled: data.settings?.game_enabled ?? true,
-          defaultAttempts: parseInt(data.settings?.default_attempts) || 5,
+          defaultAttempts: parseInt(data.settings?.default_attempts) || 3,
           defaultLives: parseInt(data.settings?.default_lives) || 100,
           autoReplyEnabled: data.settings?.auto_reply_enabled ?? true,
           autoReplyText: data.settings?.auto_reply_text || 'удачно'

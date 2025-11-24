@@ -20,7 +20,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
     autoReplyEnabled: true,
     autoReplyText: 'удачно',
     gameEnabled: true,
-    defaultAttempts: 5,
+    defaultAttempts: 3,
     defaultLives: 100,
     vkAccessToken: ''
   });
@@ -46,7 +46,7 @@ const CommunitySettings: React.FC<CommunitySettingsProps> = ({ communityId }) =>
             autoReplyEnabled: Boolean(communitySettings.auto_reply_enabled),
             autoReplyText: communitySettings.auto_reply_text || '',
             gameEnabled: Boolean(communitySettings.game_enabled),
-            defaultAttempts: Number(communitySettings.default_attempts) || 5,
+            defaultAttempts: Number(communitySettings.default_attempts) || 3,
             defaultLives: Number(communitySettings.default_lives) || 100,
             vkAccessToken: communitySettings.vk_access_token || ''
           });

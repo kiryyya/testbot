@@ -28,7 +28,7 @@ const createTable = async () => {
         vk_user_id INTEGER NOT NULL UNIQUE,
         user_name VARCHAR(255),
         profile_photo VARCHAR(500),
-        attempts_left INTEGER DEFAULT 5,
+        attempts_left INTEGER DEFAULT 3,
         lives_count INTEGER DEFAULT 100,
         total_score INTEGER DEFAULT 0,
         last_activity TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -120,7 +120,7 @@ const createTable = async () => {
         ('auto_reply_enabled', 'true', 'boolean', 'Включены ли автоответы на комментарии'),
         ('auto_reply_text', 'удачно', 'string', 'Текст для автоответов на комментарии'),
         ('game_enabled', 'true', 'boolean', 'Включена ли игровая система'),
-        ('default_attempts', '5', 'number', 'Количество попыток для новых игроков'),
+        ('default_attempts', '3', 'number', 'Количество попыток для новых игроков'),
         ('default_lives', '100', 'number', 'Количество жизней для новых игроков')
       ON CONFLICT (setting_key) DO NOTHING;
     `;
@@ -145,7 +145,7 @@ const createTable = async () => {
         auto_reply_enabled BOOLEAN DEFAULT true,
         auto_reply_text TEXT DEFAULT 'удачно',
         game_enabled BOOLEAN DEFAULT true,
-        default_attempts INTEGER DEFAULT 5,
+        default_attempts INTEGER DEFAULT 3,
         default_lives INTEGER DEFAULT 100,
         vk_access_token TEXT,
         confirmation_code VARCHAR(255),
@@ -233,7 +233,7 @@ const createTable = async () => {
         id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
         post_id TEXT NOT NULL UNIQUE,
         game_enabled BOOLEAN DEFAULT false,
-        attempts_per_player INTEGER DEFAULT 5,
+        attempts_per_player INTEGER DEFAULT 3,
         lives_per_player INTEGER DEFAULT 100,
         prize_keyword VARCHAR(50) DEFAULT 'приз',
         promo_codes TEXT[] DEFAULT '{}',
@@ -250,7 +250,7 @@ const createTable = async () => {
         vk_user_id INTEGER NOT NULL,
         user_name VARCHAR(255),
         profile_photo VARCHAR(500),
-        attempts_left INTEGER DEFAULT 5,
+        attempts_left INTEGER DEFAULT 3,
         lives_count INTEGER DEFAULT 100,
         total_score INTEGER DEFAULT 0,
         has_won BOOLEAN DEFAULT false,
@@ -375,6 +375,32 @@ const createTable = async () => {
     
     await pool.query(migratePostIdToText);
     console.log('✅ Миграция: post_id изменен на TEXT во всех таблицах');
+    
+    // Миграция: обновление количества попыток с 5 на 3
+    const migrateAttemptsTo3 = `
+      DO $$
+      BEGIN
+        -- Обновляем настройки в admin_settings
+        UPDATE admin_settings 
+        SET setting_value = '3', updated_at = CURRENT_TIMESTAMP 
+        WHERE setting_key = 'default_attempts' AND setting_value = '5';
+        
+        -- Обновляем настройки в community_settings
+        UPDATE community_settings 
+        SET default_attempts = 3, updated_at = CURRENT_TIMESTAMP 
+        WHERE default_attempts = 5;
+        
+        -- Обновляем настройки в post_game_settings
+        UPDATE post_game_settings 
+        SET attempts_per_player = 3, updated_at = CURRENT_TIMESTAMP 
+        WHERE attempts_per_player = 5;
+        
+        RAISE NOTICE 'Миграция: количество попыток обновлено с 5 на 3';
+      END $$;
+    `;
+    
+    await pool.query(migrateAttemptsTo3);
+    console.log('✅ Миграция: количество попыток обновлено с 5 на 3');
 
     await pool.query(indexesQuery);
     console.log('✅ Индексы созданы');
@@ -437,7 +463,7 @@ const findOrCreateVkPlayer = async (vkUserId, userName = null, profilePhoto = nu
         userName || `VK User ${vkUserId}`, 
         profilePhoto
       ]);
-      console.log(`🆕 Новый игрок VK ${vkUserId} создан с 5 попытками и 100 жизнями`);
+      console.log(`🆕 Новый игрок VK ${vkUserId} создан с 3 попытками и 100 жизнями`);
       return createResult.rows[0];
     }
   } catch (error) {
@@ -563,10 +589,10 @@ const getPlayerEvents = async (playerId, limit = 50) => {
   }
 };
 
-// Функция для расчета урона жизней (рандомный урон от 15 до 40 жизней за попытку)
+// Функция для расчета урона жизней (рандомный урон от 20 до 40 жизней за попытку)
 const calculateDamage = () => {
-  const minDamage = 15;
-  const maxDamage = 40;
+  const minDamage = 25;
+  const maxDamage = 45;
   const damage = Math.floor(Math.random() * (maxDamage - minDamage + 1)) + minDamage;
   console.log(`🎯 Рандомный урон за попытку: ${damage} жизней (диапазон ${minDamage}-${maxDamage})`);
   return damage;
@@ -610,7 +636,7 @@ const getPostGameSettings = async (postId) => {
 };
 
 // Функция для создания/обновления настроек игры поста
-const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 5, livesPerPlayer = 100, prizeKeyword = 'приз', promoCodes = []) => {
+const setPostGameSettings = async (postId, gameEnabled, attemptsPerPlayer = 3, livesPerPlayer = 100, prizeKeyword = 'приз', promoCodes = []) => {
   try {
     console.log('💾 Сохранение настроек игры:', {
       postId,
@@ -675,7 +701,7 @@ const findOrCreatePostPlayer = async (postId, vkUserId, userName = null, profile
           post_id, vk_user_id, user_name, profile_photo, 
           attempts_left, lives_count, total_score
         )
-        VALUES ($1, $2, $3, $4, 5, 100, 0)
+        VALUES ($1, $2, $3, $4, 3, 100, 0)
         RETURNING *
       `;
       const createResult = await pool.query(createQuery, [postId, vkUserId, userName, profilePhoto]);
@@ -835,7 +861,7 @@ const getCommunitySettings = async (communityId) => {
         auto_reply_enabled: true,
         auto_reply_text: 'удачно',
         game_enabled: true,
-        default_attempts: 5,
+        default_attempts: 3,
         default_lives: 100,
         vk_access_token: null
       };

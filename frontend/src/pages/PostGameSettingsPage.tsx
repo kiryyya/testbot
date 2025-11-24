@@ -17,7 +17,7 @@ const PostGameSettingsPage: React.FC = () => {
   
   const [settings, setSettings] = useState<GameSettings>({
     game_enabled: false,
-    attempts_per_player: 5,
+    attempts_per_player: 3,
     lives_per_player: 100,
     prize_keyword: 'приз',
     promo_codes: []
@@ -44,7 +44,7 @@ const PostGameSettingsPage: React.FC = () => {
         const data = response.data;
         setSettings({
           game_enabled: data.game_enabled || false,
-          attempts_per_player: data.attempts_per_player || 5,
+          attempts_per_player: data.attempts_per_player || 3,
           lives_per_player: data.lives_per_player || 100,
           prize_keyword: data.prize_keyword || 'приз',
           promo_codes: data.promo_codes || []
