@@ -85,6 +85,44 @@ export const apiService = {
     return response.data;
   },
 
+  // ===== API ДЛЯ АВТОРАССЫЛОК =====
+
+  // Синхронизация участников сообщества (парсинг в БД)
+  syncCommunityMembers: async (communityId: number): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/communities/${communityId}/sync-members`);
+    return response.data;
+  },
+
+  // Получить количество участников сообщества
+  getCommunityMembersCount: async (communityId: number): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/communities/${communityId}/members/count`);
+    return response.data;
+  },
+
+  // Создать рассылку
+  createBroadcast: async (communityId: number, messageText: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/broadcasts', { communityId, messageText });
+    return response.data;
+  },
+
+  // Запустить рассылку
+  startBroadcast: async (campaignId: string): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/broadcasts/${campaignId}/start`);
+    return response.data;
+  },
+
+  // Получить статус рассылки
+  getBroadcastStatus: async (campaignId: string): Promise<ApiResponse<any>> => {
+    const response = await api.get(`/broadcasts/${campaignId}`);
+    return response.data;
+  },
+
+  // Получить список рассылок сообщества
+  getCommunityBroadcasts: async (communityId: number): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/communities/${communityId}/broadcasts`);
+    return response.data;
+  },
+
 };
 
 export default api;

@@ -224,6 +224,81 @@ const createTable = async () => {
     await pool.query(userCommunitiesQuery);
     console.log('✅ Таблица user_communities создана или уже существует');
 
+    // Таблица для хранения участников сообществ (для авторассылок)
+    const communityMembersQuery = `
+      CREATE TABLE IF NOT EXISTS community_members (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        community_id BIGINT NOT NULL,
+        vk_user_id INTEGER NOT NULL,
+        user_name VARCHAR(255),
+        profile_photo VARCHAR(500),
+        is_active BOOLEAN DEFAULT true,
+        can_send_message BOOLEAN DEFAULT true,
+        last_message_sent_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE(community_id, vk_user_id)
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_community_members_community_id 
+      ON community_members(community_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_community_members_vk_user_id 
+      ON community_members(vk_user_id);
+    `;
+
+    // Таблица для рассылок
+    const broadcastCampaignsQuery = `
+      CREATE TABLE IF NOT EXISTS broadcast_campaigns (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        community_id BIGINT NOT NULL,
+        message_text TEXT NOT NULL,
+        status VARCHAR(50) DEFAULT 'draft',
+        total_recipients INTEGER DEFAULT 0,
+        sent_count INTEGER DEFAULT 0,
+        failed_count INTEGER DEFAULT 0,
+        started_at TIMESTAMP,
+        completed_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_community_id 
+      ON broadcast_campaigns(community_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_status 
+      ON broadcast_campaigns(status);
+    `;
+
+    // Таблица для логов рассылок
+    const broadcastLogsQuery = `
+      CREATE TABLE IF NOT EXISTS broadcast_logs (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        campaign_id UUID NOT NULL,
+        vk_user_id INTEGER NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        error_message TEXT,
+        sent_at TIMESTAMP,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (campaign_id) REFERENCES broadcast_campaigns(id) ON DELETE CASCADE
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_broadcast_logs_campaign_id 
+      ON broadcast_logs(campaign_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_broadcast_logs_vk_user_id 
+      ON broadcast_logs(vk_user_id);
+    `;
+
+    await pool.query(communityMembersQuery);
+    console.log('✅ Таблица community_members создана или уже существует');
+
+    await pool.query(broadcastCampaignsQuery);
+    console.log('✅ Таблица broadcast_campaigns создана или уже существует');
+
+    await pool.query(broadcastLogsQuery);
+    console.log('✅ Таблица broadcast_logs создана или уже существует');
+
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
 
@@ -1056,6 +1131,268 @@ const removeUserCommunity = async (userId, communityId) => {
   }
 };
 
+// ===== ФУНКЦИИ ДЛЯ АВТОРАССЫЛОК =====
+
+/**
+ * Парсинг участников сообщества и сохранение в БД
+ */
+const syncCommunityMembers = async (communityId, accessToken) => {
+  try {
+    console.log(`📥 Начинаем синхронизацию участников сообщества ${communityId}...`);
+    
+    const axios = require('axios');
+    let allMembers = [];
+    let offset = 0;
+    const count = 1000; // Максимум за один запрос
+    
+    while (true) {
+      const response = await axios.get('https://api.vk.com/method/groups.getMembers', {
+        params: {
+          group_id: communityId,
+          access_token: accessToken,
+          v: '5.199',
+          count: count,
+          offset: offset,
+          fields: 'photo_50,first_name,last_name'
+        }
+      });
+      
+      if (response.data.error) {
+        throw new Error(`VK API Error: ${response.data.error.error_msg}`);
+      }
+      
+      const members = response.data.response.items || [];
+      if (members.length === 0) break;
+      
+      allMembers = allMembers.concat(members);
+      offset += count;
+      
+      console.log(`📊 Получено ${allMembers.length} участников...`);
+      
+      // Дебаунс между запросами
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Если получили меньше чем запрашивали, значит это последняя страница
+      if (members.length < count) break;
+    }
+    
+    console.log(`✅ Всего получено ${allMembers.length} участников`);
+    
+    // Сохраняем в БД
+    let savedCount = 0;
+    for (const member of allMembers) {
+      const query = `
+        INSERT INTO community_members (
+          community_id, vk_user_id, user_name, profile_photo
+        )
+        VALUES ($1, $2, $3, $4)
+        ON CONFLICT (community_id, vk_user_id)
+        DO UPDATE SET
+          user_name = EXCLUDED.user_name,
+          profile_photo = EXCLUDED.profile_photo,
+          updated_at = CURRENT_TIMESTAMP
+        RETURNING *
+      `;
+      
+      const userName = `${member.first_name || ''} ${member.last_name || ''}`.trim() || `User ${member.id}`;
+      
+      await pool.query(query, [
+        communityId,
+        member.id,
+        userName,
+        member.photo_50 || null
+      ]);
+      
+      savedCount++;
+    }
+    
+    console.log(`✅ Сохранено ${savedCount} участников в БД`);
+    return { total: allMembers.length, saved: savedCount };
+  } catch (error) {
+    console.error('❌ Ошибка синхронизации участников:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить активных участников сообщества для рассылки
+ */
+const getActiveCommunityMembers = async (communityId, limit = null) => {
+  try {
+    let query = `
+      SELECT * FROM community_members
+      WHERE community_id = $1 
+        AND is_active = true 
+        AND can_send_message = true
+      ORDER BY vk_user_id
+    `;
+    
+    const params = [communityId];
+    if (limit) {
+      query += ` LIMIT $2`;
+      params.push(limit);
+    }
+    
+    const result = await pool.query(query, params);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка получения участников:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить количество участников сообщества
+ */
+const getCommunityMembersCount = async (communityId) => {
+  try {
+    const result = await pool.query(
+      `SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE is_active = true AND can_send_message = true) as active
+       FROM community_members 
+       WHERE community_id = $1`,
+      [communityId]
+    );
+    
+    return result.rows[0] || { total: 0, active: 0 };
+  } catch (error) {
+    console.error('❌ Ошибка получения количества участников:', error);
+    throw error;
+  }
+};
+
+/**
+ * Создать новую рассылку
+ */
+const createBroadcastCampaign = async (communityId, messageText) => {
+  try {
+    const query = `
+      INSERT INTO broadcast_campaigns (
+        community_id, message_text, status, total_recipients
+      )
+      VALUES ($1, $2, 'draft', 0)
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [communityId, messageText]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка создания рассылки:', error);
+    throw error;
+  }
+};
+
+/**
+ * Обновить статус рассылки
+ */
+const updateBroadcastCampaign = async (campaignId, updates) => {
+  try {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+    
+    if (updates.status !== undefined) {
+      fields.push(`status = $${paramIndex++}`);
+      values.push(updates.status);
+    }
+    if (updates.sent_count !== undefined) {
+      fields.push(`sent_count = $${paramIndex++}`);
+      values.push(updates.sent_count);
+    }
+    if (updates.failed_count !== undefined) {
+      fields.push(`failed_count = $${paramIndex++}`);
+      values.push(updates.failed_count);
+    }
+    if (updates.started_at !== undefined) {
+      fields.push(`started_at = $${paramIndex++}`);
+      values.push(updates.started_at);
+    }
+    if (updates.completed_at !== undefined) {
+      fields.push(`completed_at = $${paramIndex++}`);
+      values.push(updates.completed_at);
+    }
+    
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(campaignId);
+    
+    const query = `
+      UPDATE broadcast_campaigns
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка обновления рассылки:', error);
+    throw error;
+  }
+};
+
+/**
+ * Добавить лог отправки
+ */
+const addBroadcastLog = async (campaignId, vkUserId, status, errorMessage = null) => {
+  try {
+    const query = `
+      INSERT INTO broadcast_logs (
+        campaign_id, vk_user_id, status, error_message, sent_at
+      )
+      VALUES ($1, $2, $3, $4, $5)
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [
+      campaignId,
+      vkUserId,
+      status,
+      errorMessage,
+      status === 'sent' ? new Date() : null
+    ]);
+    
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка добавления лога:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить рассылки сообщества
+ */
+const getBroadcastCampaigns = async (communityId) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM broadcast_campaigns WHERE community_id = $1 ORDER BY created_at DESC',
+      [communityId]
+    );
+    
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка получения рассылок:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить рассылку по ID
+ */
+const getBroadcastCampaign = async (campaignId) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM broadcast_campaigns WHERE id = $1',
+      [campaignId]
+    );
+    
+    return result.rows[0] || null;
+  } catch (error) {
+    console.error('❌ Ошибка получения рассылки:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -1081,5 +1418,14 @@ module.exports = {
   // Функции для работы с сообществами пользователей
   addUserCommunity,
   getUserCommunities,
-  removeUserCommunity
+  removeUserCommunity,
+  // Функции для авторассылок
+  syncCommunityMembers,
+  getActiveCommunityMembers,
+  getCommunityMembersCount,
+  createBroadcastCampaign,
+  updateBroadcastCampaign,
+  addBroadcastLog,
+  getBroadcastCampaigns,
+  getBroadcastCampaign
 };

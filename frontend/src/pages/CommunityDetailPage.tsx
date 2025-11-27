@@ -6,6 +6,7 @@ import { getGroupInfo, getCommunityPosts, VKGroup, VKPost, getAccessLevelText, g
 import PostCard from '../components/PostCard';
 import CommunitySettings from '../components/CommunitySettings';
 import CallbackSetup from '../components/CallbackSetup';
+import BroadcastManager from '../components/BroadcastManager';
 import './CommunityDetailPage.css';
 
 const CommunityDetailPage: React.FC = () => {
@@ -408,6 +409,9 @@ const CommunityDetailPage: React.FC = () => {
 
         {/* Настройки автоответов для сообщества */}
         <CommunitySettings communityId={community.id} />
+
+        {/* Модуль авторассылок */}
+        <BroadcastManager communityId={community.id} />
           </>
         {/* )} */}
 

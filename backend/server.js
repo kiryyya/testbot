@@ -31,8 +31,19 @@ const {
   // Функции для работы с сообществами пользователей
   addUserCommunity,
   getUserCommunities,
-  removeUserCommunity
+  removeUserCommunity,
+  // Функции для авторассылок
+  syncCommunityMembers,
+  getActiveCommunityMembers,
+  getCommunityMembersCount,
+  createBroadcastCampaign,
+  updateBroadcastCampaign,
+  addBroadcastLog,
+  getBroadcastCampaigns,
+  getBroadcastCampaign
 } = require('./database');
+
+const { sendBroadcastMessages } = require('./broadcast');
 
 //1
 
@@ -2221,6 +2232,204 @@ const getSetting = async (key) => {
     return null;
   }
 };
+
+// ===== API ДЛЯ АВТОРАССЫЛОК =====
+
+// Синхронизация участников сообщества (парсинг в БД)
+app.post('/api/communities/:communityId/sync-members', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    
+    // Получаем access_token сообщества из БД
+    const communityData = await pool.query(
+      'SELECT access_token FROM user_communities WHERE community_id = $1',
+      [communityId]
+    );
+    
+    if (!communityData.rows || communityData.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сообщество не найдено'
+      });
+    }
+    
+    const accessToken = communityData.rows[0].access_token;
+    
+    // Парсим всех участников и сохраняем в БД
+    const result = await syncCommunityMembers(communityId, accessToken);
+    
+    res.json({
+      success: true,
+      message: 'Участники успешно спарсены и сохранены в БД',
+      data: result
+    });
+  } catch (error) {
+    console.error('Ошибка синхронизации участников:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Ошибка синхронизации участников'
+    });
+  }
+});
+
+// Получить количество участников сообщества
+app.get('/api/communities/:communityId/members/count', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    
+    const result = await getCommunityMembersCount(communityId);
+    
+    res.json({
+      success: true,
+      data: result
+    });
+  } catch (error) {
+    console.error('Ошибка получения количества участников:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения количества участников'
+    });
+  }
+});
+
+// Создать рассылку
+app.post('/api/broadcasts', async (req, res) => {
+  try {
+    const { communityId, messageText } = req.body;
+    
+    if (!communityId || !messageText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Требуются communityId и messageText'
+      });
+    }
+    
+    const campaign = await createBroadcastCampaign(communityId, messageText);
+    
+    res.json({
+      success: true,
+      message: 'Рассылка создана',
+      data: campaign
+    });
+  } catch (error) {
+    console.error('Ошибка создания рассылки:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка создания рассылки'
+    });
+  }
+});
+
+// Запустить рассылку
+app.post('/api/broadcasts/:campaignId/start', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    
+    // Получаем данные кампании
+    const campaign = await getBroadcastCampaign(campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: 'Рассылка не найдена'
+      });
+    }
+    
+    // Получаем access_token
+    const communityData = await pool.query(
+      'SELECT access_token FROM user_communities WHERE community_id = $1',
+      [campaign.community_id]
+    );
+    
+    if (!communityData.rows || communityData.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сообщество не найдено'
+      });
+    }
+    
+    const accessToken = communityData.rows[0].access_token;
+    
+    // Запускаем рассылку асинхронно (не блокируем ответ)
+    sendBroadcastMessages(campaign.community_id, accessToken, campaign.message_text, campaignId)
+      .then(result => {
+        console.log('✅ Рассылка завершена:', result);
+      })
+      .catch(error => {
+        console.error('❌ Ошибка в фоновой рассылке:', error);
+      });
+    
+    res.json({
+      success: true,
+      message: 'Рассылка запущена. Проверьте логи сервера для отслеживания прогресса.',
+      data: { campaignId }
+    });
+  } catch (error) {
+    console.error('Ошибка запуска рассылки:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка запуска рассылки'
+    });
+  }
+});
+
+// Получить статус рассылки
+app.get('/api/broadcasts/:campaignId', async (req, res) => {
+  try {
+    const campaignId = req.params.campaignId;
+    
+    const campaign = await getBroadcastCampaign(campaignId);
+    
+    if (!campaign) {
+      return res.status(404).json({
+        success: false,
+        message: 'Рассылка не найдена'
+      });
+    }
+    
+    const logsResult = await pool.query(
+      `SELECT status, COUNT(*) as count 
+       FROM broadcast_logs 
+       WHERE campaign_id = $1 
+       GROUP BY status`,
+      [campaignId]
+    );
+    
+    res.json({
+      success: true,
+      data: {
+        campaign: campaign,
+        logs: logsResult.rows
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка получения рассылки:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения рассылки'
+    });
+  }
+});
+
+// Получить список рассылок сообщества
+app.get('/api/communities/:communityId/broadcasts', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    
+    const campaigns = await getBroadcastCampaigns(communityId);
+    
+    res.json({
+      success: true,
+      data: campaigns
+    });
+  } catch (error) {
+    console.error('Ошибка получения рассылок:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения рассылок'
+    });
+  }
+});
 
 // Обработка корневого маршрута
 app.get('/', (req, res) => {
