@@ -41,7 +41,12 @@ const {
   addBroadcastLog,
   getBroadcastCampaigns,
   getBroadcastCampaign,
-  getScheduledCampaigns
+  getScheduledCampaigns,
+  // Функции для запланированных постов
+  createScheduledPost,
+  getScheduledPosts,
+  updateScheduledPost,
+  getCommunityScheduledPosts
 } = require('./database');
 
 const { sendBroadcastMessages } = require('./broadcast');
@@ -2039,6 +2044,117 @@ app.post('/api/communities/:communityId/settings', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка при сохранении настроек сообщества'
+    });
+  }
+});
+
+// ===== API ДЛЯ СОЗДАНИЯ И ПЛАНИРОВАНИЯ ПОСТОВ =====
+
+// Создать запланированный пост
+app.post('/api/communities/:communityId/posts', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    const { 
+      postText, 
+      scheduledAt, 
+      attachments,
+      gameEnabled,
+      attemptsPerPlayer,
+      livesPerPlayer,
+      prizeKeyword,
+      promoCodes
+    } = req.body;
+    
+    if (!postText) {
+      return res.status(400).json({
+        success: false,
+        message: 'Требуется postText'
+      });
+    }
+    
+    // Валидация времени публикации
+    let scheduledDate = null;
+    if (scheduledAt) {
+      scheduledDate = new Date(scheduledAt);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Неверный формат времени публикации'
+        });
+      }
+      
+      // Проверяем, что время в будущем
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Время публикации должно быть в будущем'
+        });
+      }
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Требуется scheduledAt для планирования поста'
+      });
+    }
+    
+    // Получаем access_token сообщества
+    const communityData = await pool.query(
+      'SELECT access_token FROM user_communities WHERE community_id = $1',
+      [communityId]
+    );
+    
+    if (!communityData.rows || communityData.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Сообщество не найдено'
+      });
+    }
+    
+    // Создаем запланированный пост
+    const scheduledPost = await createScheduledPost({
+      communityId,
+      postText,
+      attachments: attachments ? JSON.stringify(attachments) : null,
+      scheduledAt: scheduledDate,
+      gameEnabled: gameEnabled || false,
+      attemptsPerPlayer: attemptsPerPlayer || 3,
+      livesPerPlayer: livesPerPlayer || 100,
+      prizeKeyword: prizeKeyword || 'приз',
+      promoCodes: promoCodes || []
+    });
+    
+    const message = `Пост запланирован на ${scheduledDate.toLocaleString('ru-RU')}`;
+    
+    res.json({
+      success: true,
+      message: message,
+      data: scheduledPost
+    });
+  } catch (error) {
+    console.error('Ошибка создания запланированного поста:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Ошибка создания запланированного поста'
+    });
+  }
+});
+
+// Получить запланированные посты сообщества
+app.get('/api/communities/:communityId/scheduled-posts', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    
+    const posts = await getCommunityScheduledPosts(communityId);
+    
+    res.json({
+      success: true,
+      data: posts
+    });
+  } catch (error) {
+    console.error('Ошибка получения запланированных постов:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения запланированных постов'
     });
   }
 });

@@ -7,6 +7,8 @@ import PostCard from '../components/PostCard';
 import CommunitySettings from '../components/CommunitySettings';
 import CallbackSetup from '../components/CallbackSetup';
 import BroadcastManager from '../components/BroadcastManager';
+import PostCreator from '../components/PostCreator';
+import ScheduledPostsList from '../components/ScheduledPostsList';
 import './CommunityDetailPage.css';
 
 const CommunityDetailPage: React.FC = () => {
@@ -21,7 +23,7 @@ const CommunityDetailPage: React.FC = () => {
   const [postsLoading, setPostsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [postsError, setPostsError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'posts'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'create' | 'posts'>('info');
 
   // Загрузка информации о сообществе
   const loadCommunityInfo = async () => {
@@ -227,6 +229,14 @@ const CommunityDetailPage: React.FC = () => {
         </button>
         
         <button
+          className={`tab ${activeTab === 'create' ? 'active' : ''}`}
+          onClick={() => setActiveTab('create')}
+        >
+          <span className="tab-icon">➕</span>
+          Создать пост
+        </button>
+        
+        <button
           className={`tab ${activeTab === 'posts' ? 'active' : ''}`}
           onClick={() => {
             setActiveTab('posts');
@@ -414,6 +424,24 @@ const CommunityDetailPage: React.FC = () => {
         <BroadcastManager communityId={community.id} />
           </>
         {/* )} */}
+
+        {activeTab === 'create' && (
+          <div className="community-content">
+            <PostCreator 
+              communityId={community.id}
+              onPostCreated={() => {
+                // Обновляем список постов после создания
+                loadCommunityPosts();
+              }}
+            />
+            <ScheduledPostsList 
+              communityId={community.id}
+              onPostPublished={() => {
+                loadCommunityPosts();
+              }}
+            />
+          </div>
+        )}
 
         {activeTab === 'posts' && (
           <div className="community-posts-section">

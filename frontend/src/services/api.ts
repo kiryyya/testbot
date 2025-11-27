@@ -123,6 +123,35 @@ export const apiService = {
     return response.data;
   },
 
+  // ===== API ДЛЯ СОЗДАНИЯ ПОСТОВ =====
+
+  // Создать запланированный пост
+  createScheduledPost: async (
+    communityId: number, 
+    postText: string, 
+    scheduledAt: string,
+    gameSettings?: {
+      gameEnabled: boolean;
+      attemptsPerPlayer?: number;
+      livesPerPlayer?: number;
+      prizeKeyword?: string;
+      promoCodes?: string[];
+    }
+  ): Promise<ApiResponse<any>> => {
+    const response = await api.post(`/communities/${communityId}/posts`, {
+      postText,
+      scheduledAt,
+      ...gameSettings
+    });
+    return response.data;
+  },
+
+  // Получить запланированные посты сообщества
+  getScheduledPosts: async (communityId: number): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/communities/${communityId}/scheduled-posts`);
+    return response.data;
+  },
+
 };
 
 export default api;

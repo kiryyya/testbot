@@ -1,6 +1,7 @@
 const cron = require('node-cron');
-const { getScheduledCampaigns, updateBroadcastCampaign } = require('./database');
+const { getScheduledCampaigns, updateBroadcastCampaign, getScheduledPosts } = require('./database');
 const { sendBroadcastMessages } = require('./broadcast');
+const { publishScheduledPost } = require('./postPublisher');
 const { pool } = require('./database');
 
 /**
@@ -26,6 +27,9 @@ class BroadcastScheduler {
     
     // Запускаем проверку каждую минуту
     this.cronJob = cron.schedule('* * * * *', async () => {
+      // Проверяем запланированные посты
+      await this.checkAndPublishScheduledPosts();
+      // Проверяем запланированные рассылки
       await this.checkAndRunScheduledCampaigns();
     });
 
@@ -42,6 +46,39 @@ class BroadcastScheduler {
       this.cronJob = null;
       this.isRunning = false;
       console.log('🛑 Планировщик остановлен');
+    }
+  }
+
+  /**
+   * Проверить и опубликовать запланированные посты
+   */
+  async checkAndPublishScheduledPosts() {
+    try {
+      const scheduledPosts = await getScheduledPosts();
+      
+      if (scheduledPosts.length === 0) {
+        return; // Нет запланированных постов
+      }
+
+      console.log(`📅 Найдено ${scheduledPosts.length} запланированных постов для публикации`);
+
+      for (const post of scheduledPosts) {
+        try {
+          console.log(`🚀 Публикация запланированного поста ${post.id} (запланировано на ${post.scheduled_at})`);
+          
+          // Публикуем пост асинхронно
+          publishScheduledPost(post).then(result => {
+            console.log(`✅ Запланированный пост ${post.id} опубликован:`, result);
+          }).catch(error => {
+            console.error(`❌ Ошибка в запланированном посте ${post.id}:`, error);
+          });
+
+        } catch (error) {
+          console.error(`❌ Ошибка при публикации запланированного поста ${post.id}:`, error);
+        }
+      }
+    } catch (error) {
+      console.error('❌ Ошибка в планировщике постов:', error);
     }
   }
 

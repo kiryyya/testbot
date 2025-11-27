@@ -321,6 +321,40 @@ const createTable = async () => {
     await pool.query(broadcastLogsQuery);
     console.log('✅ Таблица broadcast_logs создана или уже существует');
 
+    // Таблица для запланированных постов
+    const scheduledPostsQuery = `
+      CREATE TABLE IF NOT EXISTS scheduled_posts (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        community_id BIGINT NOT NULL,
+        post_text TEXT NOT NULL,
+        attachments TEXT,
+        scheduled_at TIMESTAMP NOT NULL,
+        published_at TIMESTAMP,
+        vk_post_id TEXT,
+        status VARCHAR(50) DEFAULT 'scheduled',
+        game_enabled BOOLEAN DEFAULT false,
+        attempts_per_player INTEGER DEFAULT 3,
+        lives_per_player INTEGER DEFAULT 100,
+        prize_keyword VARCHAR(50) DEFAULT 'приз',
+        promo_codes TEXT[] DEFAULT '{}',
+        error_message TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_scheduled_posts_community_id 
+      ON scheduled_posts(community_id);
+      
+      CREATE INDEX IF NOT EXISTS idx_scheduled_posts_status 
+      ON scheduled_posts(status);
+      
+      CREATE INDEX IF NOT EXISTS idx_scheduled_posts_scheduled_at 
+      ON scheduled_posts(scheduled_at) WHERE scheduled_at IS NOT NULL;
+    `;
+
+    await pool.query(scheduledPostsQuery);
+    console.log('✅ Таблица scheduled_posts создана или уже существует');
+
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
 
@@ -1440,6 +1474,135 @@ const getScheduledCampaigns = async () => {
   }
 };
 
+/**
+ * Создать запланированный пост
+ */
+const createScheduledPost = async (postData) => {
+  try {
+    const {
+      communityId,
+      postText,
+      attachments,
+      scheduledAt,
+      gameEnabled,
+      attemptsPerPlayer,
+      livesPerPlayer,
+      prizeKeyword,
+      promoCodes
+    } = postData;
+
+    const query = `
+      INSERT INTO scheduled_posts (
+        community_id, post_text, attachments, scheduled_at,
+        game_enabled, attempts_per_player, lives_per_player,
+        prize_keyword, promo_codes, status
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'scheduled')
+      RETURNING *
+    `;
+
+    const result = await pool.query(query, [
+      communityId,
+      postText,
+      attachments ? JSON.stringify(attachments) : null,
+      scheduledAt,
+      gameEnabled || false,
+      attemptsPerPlayer || 3,
+      livesPerPlayer || 100,
+      prizeKeyword || 'приз',
+      promoCodes || []
+    ]);
+
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка создания запланированного поста:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить запланированные посты, которые нужно опубликовать
+ */
+const getScheduledPosts = async () => {
+  try {
+    const now = new Date();
+    const result = await pool.query(
+      `SELECT * FROM scheduled_posts 
+       WHERE status = 'scheduled' 
+         AND scheduled_at IS NOT NULL 
+         AND scheduled_at <= $1
+       ORDER BY scheduled_at ASC`,
+      [now]
+    );
+    
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка получения запланированных постов:', error);
+    throw error;
+  }
+};
+
+/**
+ * Обновить статус запланированного поста
+ */
+const updateScheduledPost = async (postId, updates) => {
+  try {
+    const fields = [];
+    const values = [];
+    let paramIndex = 1;
+    
+    if (updates.status !== undefined) {
+      fields.push(`status = $${paramIndex++}`);
+      values.push(updates.status);
+    }
+    if (updates.vk_post_id !== undefined) {
+      fields.push(`vk_post_id = $${paramIndex++}`);
+      values.push(updates.vk_post_id);
+    }
+    if (updates.published_at !== undefined) {
+      fields.push(`published_at = $${paramIndex++}`);
+      values.push(updates.published_at);
+    }
+    if (updates.error_message !== undefined) {
+      fields.push(`error_message = $${paramIndex++}`);
+      values.push(updates.error_message);
+    }
+    
+    fields.push(`updated_at = CURRENT_TIMESTAMP`);
+    values.push(postId);
+    
+    const query = `
+      UPDATE scheduled_posts
+      SET ${fields.join(', ')}
+      WHERE id = $${paramIndex}
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка обновления запланированного поста:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить запланированные посты сообщества
+ */
+const getCommunityScheduledPosts = async (communityId) => {
+  try {
+    const result = await pool.query(
+      'SELECT * FROM scheduled_posts WHERE community_id = $1 ORDER BY scheduled_at ASC',
+      [communityId]
+    );
+    
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка получения запланированных постов сообщества:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -1475,5 +1638,10 @@ module.exports = {
   addBroadcastLog,
   getBroadcastCampaigns,
   getBroadcastCampaign,
-  getScheduledCampaigns
+  getScheduledCampaigns,
+  // Функции для запланированных постов
+  createScheduledPost,
+  getScheduledPosts,
+  updateScheduledPost,
+  getCommunityScheduledPosts
 };
