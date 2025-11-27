@@ -19,6 +19,7 @@ interface BroadcastCampaign {
   total_recipients: number;
   sent_count: number;
   failed_count: number;
+  scheduled_at?: string;
   created_at: string;
   started_at?: string;
   completed_at?: string;
@@ -33,6 +34,8 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
   const [campaigns, setCampaigns] = useState<BroadcastCampaign[]>([]);
   const [loadingCampaigns, setLoadingCampaigns] = useState(false);
   const [notification, setNotification] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [isScheduled, setIsScheduled] = useState(false);
+  const [scheduledDateTime, setScheduledDateTime] = useState('');
 
   // Показать уведомление
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -101,12 +104,33 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
       return;
     }
 
+    // Валидация времени отправки
+    let scheduledAt: string | undefined = undefined;
+    if (isScheduled) {
+      if (!scheduledDateTime) {
+        showNotification('Выберите время отправки', 'error');
+        return;
+      }
+      
+      const selectedDate = new Date(scheduledDateTime);
+      const now = new Date();
+      
+      if (selectedDate <= now) {
+        showNotification('Время отправки должно быть в будущем', 'error');
+        return;
+      }
+      
+      scheduledAt = selectedDate.toISOString();
+    }
+
     try {
       setCreating(true);
-      const response = await apiService.createBroadcast(communityId, messageText);
+      const response = await apiService.createBroadcast(communityId, messageText, scheduledAt);
       if (response.success) {
-        showNotification('Рассылка создана', 'success');
+        showNotification(response.message || 'Рассылка создана', 'success');
         setMessageText('');
+        setIsScheduled(false);
+        setScheduledDateTime('');
         await loadCampaigns();
       } else {
         showNotification(response.message || 'Ошибка создания рассылки', 'error');
@@ -139,6 +163,7 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
       'draft': 'Черновик',
+      'scheduled': 'Запланирована',
       'running': 'В процессе',
       'completed': 'Завершена',
       'paused': 'Приостановлена',
@@ -151,6 +176,7 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
   const getStatusColor = (status: string) => {
     const colorMap: Record<string, string> = {
       'draft': '#666',
+      'scheduled': '#9C27B0',
       'running': '#2196F3',
       'completed': '#4CAF50',
       'paused': '#FF9800',
@@ -165,20 +191,22 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
     loadCampaigns();
   }, [communityId]);
 
-  // Polling для обновления статуса активных рассылок
+  // Polling для обновления статуса активных и запланированных рассылок
   useEffect(() => {
-    // Проверяем, есть ли активные рассылки
-    const runningCampaigns = campaigns.filter(c => c.status === 'running');
-    const hasRunningCampaigns = runningCampaigns.length > 0;
+    // Проверяем, есть ли активные или запланированные рассылки
+    const activeCampaigns = campaigns.filter(c => 
+      c.status === 'running' || c.status === 'scheduled'
+    );
+    const hasActiveCampaigns = activeCampaigns.length > 0;
     
-    if (!hasRunningCampaigns) {
+    if (!hasActiveCampaigns) {
       return; // Нет активных рассылок, не нужно обновлять
     }
 
-    // Обновляем статус каждые 2 секунды (тихо, без показа загрузки)
+    // Обновляем статус каждые 5 секунд (для запланированных) и 2 секунды (для активных)
     const interval = setInterval(() => {
       loadCampaigns(true);
-    }, 2000);
+    }, 5000);
 
     return () => clearInterval(interval);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -230,12 +258,43 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
           className="broadcast-textarea"
           rows={5}
         />
+        
+        {/* Опция отложенной рассылки */}
+        <div className="schedule-option">
+          <label className="schedule-checkbox">
+            <input
+              type="checkbox"
+              checked={isScheduled}
+              onChange={(e) => setIsScheduled(e.target.checked)}
+            />
+            <span>📅 Отложенная рассылка</span>
+          </label>
+          
+          {isScheduled && (
+            <div className="schedule-datetime">
+              <label className="schedule-label">Время отправки:</label>
+              <input
+                type="datetime-local"
+                value={scheduledDateTime}
+                onChange={(e) => setScheduledDateTime(e.target.value)}
+                className="schedule-input"
+                min={new Date().toISOString().slice(0, 16)}
+              />
+              {scheduledDateTime && (
+                <div className="schedule-preview">
+                  Запланировано на: {new Date(scheduledDateTime).toLocaleString('ru-RU')}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+        
         <button
           onClick={handleCreateBroadcast}
-          disabled={creating || !messageText.trim()}
+          disabled={creating || !messageText.trim() || (isScheduled && !scheduledDateTime)}
           className="create-broadcast-btn"
         >
-          {creating ? '⏳ Создание...' : '➕ Создать рассылку'}
+          {creating ? '⏳ Создание...' : isScheduled ? '📅 Создать отложенную рассылку' : '➕ Создать рассылку'}
         </button>
       </div>
 
@@ -255,7 +314,16 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
                     {getStatusText(campaign.status)}
                   </div>
                   <div className="campaign-date">
-                    {new Date(campaign.created_at).toLocaleString('ru-RU')}
+                    {campaign.scheduled_at ? (
+                      <div>
+                        <div>📅 {new Date(campaign.scheduled_at).toLocaleString('ru-RU')}</div>
+                        <div style={{ fontSize: '12px', color: '#666' }}>
+                          Создано: {new Date(campaign.created_at).toLocaleString('ru-RU')}
+                        </div>
+                      </div>
+                    ) : (
+                      new Date(campaign.created_at).toLocaleString('ru-RU')
+                    )}
                   </div>
                 </div>
                 <div className="campaign-message">{campaign.message_text}</div>
@@ -280,6 +348,11 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
                   >
                     ▶️ Запустить рассылку
                   </button>
+                )}
+                {campaign.status === 'scheduled' && (
+                  <div className="campaign-scheduled">
+                    ⏰ Рассылка запланирована на {new Date(campaign.scheduled_at!).toLocaleString('ru-RU')}
+                  </div>
                 )}
                 {campaign.status === 'running' && (
                   <div className="campaign-running">

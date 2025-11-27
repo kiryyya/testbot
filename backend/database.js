@@ -257,6 +257,7 @@ const createTable = async () => {
         total_recipients INTEGER DEFAULT 0,
         sent_count INTEGER DEFAULT 0,
         failed_count INTEGER DEFAULT 0,
+        scheduled_at TIMESTAMP,
         started_at TIMESTAMP,
         completed_at TIMESTAMP,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -268,6 +269,24 @@ const createTable = async () => {
       
       CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_status 
       ON broadcast_campaigns(status);
+      
+      CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_scheduled_at 
+      ON broadcast_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+    `;
+    
+    // Миграция: добавление поля scheduled_at если его нет
+    const addScheduledAtColumn = `
+      DO $$ 
+      BEGIN 
+        IF NOT EXISTS (
+          SELECT 1 FROM information_schema.columns 
+          WHERE table_name='broadcast_campaigns' AND column_name='scheduled_at'
+        ) THEN
+          ALTER TABLE broadcast_campaigns ADD COLUMN scheduled_at TIMESTAMP;
+          CREATE INDEX IF NOT EXISTS idx_broadcast_campaigns_scheduled_at 
+          ON broadcast_campaigns(scheduled_at) WHERE scheduled_at IS NOT NULL;
+        END IF;
+      END $$;
     `;
 
     // Таблица для логов рассылок
@@ -295,6 +314,9 @@ const createTable = async () => {
 
     await pool.query(broadcastCampaignsQuery);
     console.log('✅ Таблица broadcast_campaigns создана или уже существует');
+    
+    await pool.query(addScheduledAtColumn);
+    console.log('✅ Миграция scheduled_at выполнена');
 
     await pool.query(broadcastLogsQuery);
     console.log('✅ Таблица broadcast_logs создана или уже существует');
@@ -1265,17 +1287,20 @@ const getCommunityMembersCount = async (communityId) => {
 /**
  * Создать новую рассылку
  */
-const createBroadcastCampaign = async (communityId, messageText) => {
+const createBroadcastCampaign = async (communityId, messageText, scheduledAt = null) => {
   try {
+    // Если указано время отправки, статус будет 'scheduled', иначе 'draft'
+    const status = scheduledAt ? 'scheduled' : 'draft';
+    
     const query = `
       INSERT INTO broadcast_campaigns (
-        community_id, message_text, status, total_recipients
+        community_id, message_text, status, total_recipients, scheduled_at
       )
-      VALUES ($1, $2, 'draft', 0)
+      VALUES ($1, $2, $3, 0, $4)
       RETURNING *
     `;
     
-    const result = await pool.query(query, [communityId, messageText]);
+    const result = await pool.query(query, [communityId, messageText, status, scheduledAt]);
     return result.rows[0];
   } catch (error) {
     console.error('❌ Ошибка создания рассылки:', error);
@@ -1393,6 +1418,28 @@ const getBroadcastCampaign = async (campaignId) => {
   }
 };
 
+/**
+ * Получить запланированные рассылки, которые нужно запустить
+ */
+const getScheduledCampaigns = async () => {
+  try {
+    const now = new Date();
+    const result = await pool.query(
+      `SELECT * FROM broadcast_campaigns 
+       WHERE status = 'scheduled' 
+         AND scheduled_at IS NOT NULL 
+         AND scheduled_at <= $1
+       ORDER BY scheduled_at ASC`,
+      [now]
+    );
+    
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка получения запланированных рассылок:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -1427,5 +1474,6 @@ module.exports = {
   updateBroadcastCampaign,
   addBroadcastLog,
   getBroadcastCampaigns,
-  getBroadcastCampaign
+  getBroadcastCampaign,
+  getScheduledCampaigns
 };

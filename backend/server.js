@@ -40,10 +40,12 @@ const {
   updateBroadcastCampaign,
   addBroadcastLog,
   getBroadcastCampaigns,
-  getBroadcastCampaign
+  getBroadcastCampaign,
+  getScheduledCampaigns
 } = require('./database');
 
 const { sendBroadcastMessages } = require('./broadcast');
+const scheduler = require('./scheduler');
 
 //1
 
@@ -2295,7 +2297,7 @@ app.get('/api/communities/:communityId/members/count', async (req, res) => {
 // Создать рассылку
 app.post('/api/broadcasts', async (req, res) => {
   try {
-    const { communityId, messageText } = req.body;
+    const { communityId, messageText, scheduledAt } = req.body;
     
     if (!communityId || !messageText) {
       return res.status(400).json({
@@ -2304,11 +2306,35 @@ app.post('/api/broadcasts', async (req, res) => {
       });
     }
     
-    const campaign = await createBroadcastCampaign(communityId, messageText);
+    // Валидация времени отправки
+    let scheduledDate = null;
+    if (scheduledAt) {
+      scheduledDate = new Date(scheduledAt);
+      if (isNaN(scheduledDate.getTime())) {
+        return res.status(400).json({
+          success: false,
+          message: 'Неверный формат времени отправки'
+        });
+      }
+      
+      // Проверяем, что время в будущем
+      if (scheduledDate <= new Date()) {
+        return res.status(400).json({
+          success: false,
+          message: 'Время отправки должно быть в будущем'
+        });
+      }
+    }
+    
+    const campaign = await createBroadcastCampaign(communityId, messageText, scheduledDate);
+    
+    const message = scheduledDate 
+      ? `Рассылка создана и запланирована на ${scheduledDate.toLocaleString('ru-RU')}`
+      : 'Рассылка создана';
     
     res.json({
       success: true,
-      message: 'Рассылка создана',
+      message: message,
       data: campaign
     });
   } catch (error) {
@@ -2463,11 +2489,22 @@ app.listen(PORT, async () => {
   
   // Инициализация базы данных
   await initializeDatabase();
+  
+  // Запуск планировщика отложенных рассылок
+  scheduler.start();
 });
 
 // Обработка ошибок при завершении работы
 process.on('SIGINT', async () => {
   console.log('\n🛑 Завершение работы сервера...');
+  scheduler.stop();
+  await pool.end();
+  process.exit(0);
+});
+
+process.on('SIGTERM', async () => {
+  console.log('\n🛑 Завершение работы сервера...');
+  scheduler.stop();
   await pool.end();
   process.exit(0);
 });

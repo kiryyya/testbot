@@ -267,12 +267,84 @@
   box-shadow: 0 4px 12px rgba(33, 150, 243, 0.4);
 }
 
+.schedule-option {
+  margin-bottom: 16px;
+  padding: 16px;
+  background: var(--color-bg-light);
+  border-radius: 12px;
+  border: 2px solid #e0e0e0;
+}
+
+.schedule-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-dark);
+  margin-bottom: 12px;
+}
+
+.schedule-checkbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.schedule-datetime {
+  margin-top: 12px;
+}
+
+.schedule-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  margin-bottom: 8px;
+}
+
+.schedule-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.3s ease;
+}
+
+.schedule-input:focus {
+  outline: none;
+  border-color: var(--color-accent);
+}
+
+.schedule-preview {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .campaign-running {
   padding: 16px;
   background: #e3f2fd;
   color: #1976d2;
   border-radius: 8px;
   font-size: 14px;
+}
+
+.campaign-scheduled {
+  padding: 16px;
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
 }
 
 .running-indicator {

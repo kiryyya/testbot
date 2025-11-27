@@ -100,8 +100,8 @@ export const apiService = {
   },
 
   // Создать рассылку
-  createBroadcast: async (communityId: number, messageText: string): Promise<ApiResponse<any>> => {
-    const response = await api.post('/broadcasts', { communityId, messageText });
+  createBroadcast: async (communityId: number, messageText: string, scheduledAt?: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/broadcasts', { communityId, messageText, scheduledAt });
     return response.data;
   },
 
