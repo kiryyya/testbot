@@ -337,10 +337,6 @@ const createTable = async () => {
         lives_per_player INTEGER DEFAULT 100,
         prize_keyword VARCHAR(50) DEFAULT 'приз',
         promo_codes TEXT[] DEFAULT '{}',
-        broadcast_enabled BOOLEAN DEFAULT false,
-        broadcast_message_text TEXT,
-        broadcast_scheduled_at TIMESTAMP,
-        broadcast_delay_minutes INTEGER,
         error_message TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -355,28 +351,9 @@ const createTable = async () => {
       CREATE INDEX IF NOT EXISTS idx_scheduled_posts_scheduled_at 
       ON scheduled_posts(scheduled_at) WHERE scheduled_at IS NOT NULL;
     `;
-    
-    // Миграция: добавление полей для рассылки если их нет
-    const addBroadcastFields = `
-      DO $$ 
-      BEGIN 
-        IF NOT EXISTS (
-          SELECT 1 FROM information_schema.columns 
-          WHERE table_name='scheduled_posts' AND column_name='broadcast_enabled'
-        ) THEN
-          ALTER TABLE scheduled_posts ADD COLUMN broadcast_enabled BOOLEAN DEFAULT false;
-          ALTER TABLE scheduled_posts ADD COLUMN broadcast_message_text TEXT;
-          ALTER TABLE scheduled_posts ADD COLUMN broadcast_scheduled_at TIMESTAMP;
-          ALTER TABLE scheduled_posts ADD COLUMN broadcast_delay_minutes INTEGER;
-        END IF;
-      END $$;
-    `;
 
     await pool.query(scheduledPostsQuery);
     console.log('✅ Таблица scheduled_posts создана или уже существует');
-    
-    await pool.query(addBroadcastFields);
-    console.log('✅ Миграция broadcast полей выполнена');
 
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
@@ -1511,22 +1488,16 @@ const createScheduledPost = async (postData) => {
       attemptsPerPlayer,
       livesPerPlayer,
       prizeKeyword,
-      promoCodes,
-      broadcastEnabled,
-      broadcastMessageText,
-      broadcastScheduledAt,
-      broadcastDelayMinutes
+      promoCodes
     } = postData;
 
     const query = `
       INSERT INTO scheduled_posts (
         community_id, post_text, attachments, scheduled_at,
         game_enabled, attempts_per_player, lives_per_player,
-        prize_keyword, promo_codes, 
-        broadcast_enabled, broadcast_message_text, broadcast_scheduled_at, broadcast_delay_minutes,
-        status
+        prize_keyword, promo_codes, status
       )
-      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, 'scheduled')
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, 'scheduled')
       RETURNING *
     `;
 
@@ -1539,11 +1510,7 @@ const createScheduledPost = async (postData) => {
       attemptsPerPlayer || 3,
       livesPerPlayer || 100,
       prizeKeyword || 'приз',
-      promoCodes || [],
-      broadcastEnabled || false,
-      broadcastMessageText || null,
-      broadcastScheduledAt || null,
-      broadcastDelayMinutes || null
+      promoCodes || []
     ]);
 
     return result.rows[0];

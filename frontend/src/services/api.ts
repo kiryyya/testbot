@@ -130,22 +130,18 @@ export const apiService = {
     communityId: number, 
     postText: string, 
     scheduledAt: string,
-    settings?: {
-      gameEnabled?: boolean;
+    gameSettings?: {
+      gameEnabled: boolean;
       attemptsPerPlayer?: number;
       livesPerPlayer?: number;
       prizeKeyword?: string;
       promoCodes?: string[];
-      broadcastEnabled?: boolean;
-      broadcastMessageText?: string;
-      broadcastScheduledAt?: string;
-      broadcastDelayMinutes?: number;
     }
   ): Promise<ApiResponse<any>> => {
     const response = await api.post(`/communities/${communityId}/posts`, {
       postText,
       scheduledAt,
-      ...settings
+      ...gameSettings
     });
     return response.data;
   },

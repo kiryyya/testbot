@@ -21,13 +21,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ communityId, onPostCreated })
   const [prizeKeyword, setPrizeKeyword] = useState('приз');
   const [promoCodes, setPromoCodes] = useState<string[]>([]);
   const [newPromoCode, setNewPromoCode] = useState('');
-  
-  // Настройки рассылки
-  const [broadcastEnabled, setBroadcastEnabled] = useState(false);
-  const [broadcastMessageText, setBroadcastMessageText] = useState('');
-  const [broadcastTimeMode, setBroadcastTimeMode] = useState<'delay' | 'custom'>('delay');
-  const [broadcastDelayMinutes, setBroadcastDelayMinutes] = useState<number | null>(1);
-  const [broadcastScheduledDateTime, setBroadcastScheduledDateTime] = useState('');
 
   // Показать уведомление
   const showNotification = (message: string, type: 'success' | 'error') => {
@@ -71,35 +64,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ communityId, onPostCreated })
     try {
       setCreating(true);
       
-      // Подготовка данных для рассылки
-      let broadcastData: any = undefined;
-      if (broadcastEnabled && broadcastMessageText.trim()) {
-        if (broadcastTimeMode === 'delay') {
-          // Используем задержку
-          broadcastData = {
-            broadcastEnabled: true,
-            broadcastMessageText: broadcastMessageText,
-            broadcastDelayMinutes: broadcastDelayMinutes !== null ? broadcastDelayMinutes : 0
-          };
-        } else {
-          // Используем конкретное время
-          if (!broadcastScheduledDateTime) {
-            showNotification('Выберите время для рассылки', 'error');
-            return;
-          }
-          const broadcastDate = new Date(broadcastScheduledDateTime);
-          if (broadcastDate <= selectedDate) {
-            showNotification('Время рассылки должно быть после времени публикации поста', 'error');
-            return;
-          }
-          broadcastData = {
-            broadcastEnabled: true,
-            broadcastMessageText: broadcastMessageText,
-            broadcastScheduledAt: broadcastDate.toISOString()
-          };
-        }
-      }
-
       const response = await apiService.createScheduledPost(
         communityId,
         postText,
@@ -109,8 +73,7 @@ const PostCreator: React.FC<PostCreatorProps> = ({ communityId, onPostCreated })
           attemptsPerPlayer,
           livesPerPlayer,
           prizeKeyword,
-          promoCodes,
-          ...broadcastData
+          promoCodes
         }
       );
 
@@ -120,10 +83,6 @@ const PostCreator: React.FC<PostCreatorProps> = ({ communityId, onPostCreated })
         setScheduledDateTime('');
         setGameEnabled(false);
         setPromoCodes([]);
-        setBroadcastEnabled(false);
-        setBroadcastMessageText('');
-        setBroadcastDelayMinutes(1);
-        setBroadcastScheduledDateTime('');
         if (onPostCreated) {
           onPostCreated();
         }
@@ -277,102 +236,9 @@ const PostCreator: React.FC<PostCreatorProps> = ({ communityId, onPostCreated })
           )}
         </div>
 
-        {/* Настройки рассылки */}
-        <div className="broadcast-settings-section">
-          <label className="broadcast-settings-toggle">
-            <input
-              type="checkbox"
-              checked={broadcastEnabled}
-              onChange={(e) => setBroadcastEnabled(e.target.checked)}
-            />
-            <span>📢 Отправить рассылку вместе с постом</span>
-          </label>
-
-          {broadcastEnabled && (
-            <div className="broadcast-settings-content">
-              <div className="form-group">
-                <label className="form-label">Текст рассылки:</label>
-                <textarea
-                  value={broadcastMessageText}
-                  onChange={(e) => setBroadcastMessageText(e.target.value)}
-                  placeholder="Введите текст сообщения для рассылки..."
-                  className="broadcast-textarea"
-                  rows={4}
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Время отправки рассылки:</label>
-                <div className="broadcast-time-options">
-                  <label className="radio-option">
-                    <input
-                      type="radio"
-                      name="broadcastTimeMode"
-                      value="delay"
-                      checked={broadcastTimeMode === 'delay'}
-                      onChange={(e) => setBroadcastTimeMode('delay')}
-                    />
-                    <span>Быстрый выбор:</span>
-                  </label>
-                  <div className="delay-buttons">
-                    <button
-                      type="button"
-                      className={`delay-btn ${broadcastDelayMinutes === 0 ? 'active' : ''}`}
-                      onClick={() => setBroadcastDelayMinutes(0)}
-                    >
-                      Сразу
-                    </button>
-                    <button
-                      type="button"
-                      className={`delay-btn ${broadcastDelayMinutes === 1 ? 'active' : ''}`}
-                      onClick={() => setBroadcastDelayMinutes(1)}
-                    >
-                      Через 1 мин
-                    </button>
-                    <button
-                      type="button"
-                      className={`delay-btn ${broadcastDelayMinutes === 5 ? 'active' : ''}`}
-                      onClick={() => setBroadcastDelayMinutes(5)}
-                    >
-                      Через 5 мин
-                    </button>
-                    <button
-                      type="button"
-                      className={`delay-btn ${broadcastDelayMinutes === 10 ? 'active' : ''}`}
-                      onClick={() => setBroadcastDelayMinutes(10)}
-                    >
-                      Через 10 мин
-                    </button>
-                  </div>
-                  
-                  <label className="radio-option" style={{ marginTop: '16px' }}>
-                    <input
-                      type="radio"
-                      name="broadcastTimeMode"
-                      value="custom"
-                      checked={broadcastTimeMode === 'custom'}
-                      onChange={(e) => setBroadcastTimeMode('custom')}
-                    />
-                    <span>Выбрать время вручную:</span>
-                  </label>
-                  {broadcastTimeMode === 'custom' && (
-                    <input
-                      type="datetime-local"
-                      value={broadcastScheduledDateTime}
-                      onChange={(e) => setBroadcastScheduledDateTime(e.target.value)}
-                      className="schedule-input"
-                      min={scheduledDateTime || getMinDateTime()}
-                    />
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-
         <button
           onClick={handleCreatePost}
-          disabled={creating || !postText.trim() || !scheduledDateTime || (broadcastEnabled && !broadcastMessageText.trim())}
+          disabled={creating || !postText.trim() || !scheduledDateTime}
           className="create-post-btn"
         >
           {creating ? '⏳ Создание...' : '📅 Запланировать пост'}
