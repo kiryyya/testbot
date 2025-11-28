@@ -2062,7 +2062,11 @@ app.post('/api/communities/:communityId/posts', async (req, res) => {
       attemptsPerPlayer,
       livesPerPlayer,
       prizeKeyword,
-      promoCodes
+      promoCodes,
+      broadcastEnabled,
+      broadcastMessageText,
+      broadcastScheduledAt,
+      broadcastDelayMinutes
     } = req.body;
     
     if (!postText) {
@@ -2110,6 +2114,50 @@ app.post('/api/communities/:communityId/posts', async (req, res) => {
       });
     }
     
+    // Валидация рассылки
+    let broadcastScheduledDate = null;
+    let broadcastDelay = null;
+    
+    if (broadcastEnabled) {
+      if (!broadcastMessageText) {
+        return res.status(400).json({
+          success: false,
+          message: 'Требуется broadcastMessageText для рассылки'
+        });
+      }
+      
+      // Если указана задержка в минутах
+      if (broadcastDelayMinutes !== undefined && broadcastDelayMinutes !== null) {
+        if (![0, 1, 5, 10].includes(broadcastDelayMinutes)) {
+          return res.status(400).json({
+            success: false,
+            message: 'Задержка рассылки должна быть 0, 1, 5 или 10 минут'
+          });
+        }
+        broadcastDelay = broadcastDelayMinutes;
+      } else if (broadcastScheduledAt) {
+        // Если указано конкретное время
+        broadcastScheduledDate = new Date(broadcastScheduledAt);
+        if (isNaN(broadcastScheduledDate.getTime())) {
+          return res.status(400).json({
+            success: false,
+            message: 'Неверный формат времени рассылки'
+          });
+        }
+        if (broadcastScheduledDate <= scheduledDate) {
+          return res.status(400).json({
+            success: false,
+            message: 'Время рассылки должно быть после времени публикации поста'
+          });
+        }
+      } else {
+        return res.status(400).json({
+          success: false,
+          message: 'Требуется broadcastScheduledAt или broadcastDelayMinutes для рассылки'
+        });
+      }
+    }
+    
     // Создаем запланированный пост
     const scheduledPost = await createScheduledPost({
       communityId,
@@ -2120,7 +2168,11 @@ app.post('/api/communities/:communityId/posts', async (req, res) => {
       attemptsPerPlayer: attemptsPerPlayer || 3,
       livesPerPlayer: livesPerPlayer || 100,
       prizeKeyword: prizeKeyword || 'приз',
-      promoCodes: promoCodes || []
+      promoCodes: promoCodes || [],
+      broadcastEnabled: broadcastEnabled || false,
+      broadcastMessageText: broadcastMessageText || null,
+      broadcastScheduledAt: broadcastScheduledDate,
+      broadcastDelayMinutes: broadcastDelay
     });
     
     const message = `Пост запланирован на ${scheduledDate.toLocaleString('ru-RU')}`;

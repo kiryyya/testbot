@@ -1,5 +1,6 @@
 const axios = require('axios');
-const { updateScheduledPost, setPostGameSettings } = require('./database');
+const { updateScheduledPost, setPostGameSettings, createBroadcastCampaign } = require('./database');
+const { sendBroadcastMessages } = require('./broadcast');
 
 /**
  * Публикация поста в VK сообществе
@@ -113,6 +114,81 @@ const publishScheduledPost = async (scheduledPost) => {
         scheduledPost.promo_codes || []
       );
       console.log(`✅ Игра настроена для поста ${result.postId}`);
+    }
+
+    // Если рассылка включена, создаем и запускаем её
+    if (scheduledPost.broadcast_enabled && scheduledPost.broadcast_message_text) {
+      console.log(`📢 Создание рассылки для поста ${scheduledPost.id}...`);
+      
+      let broadcastScheduledAt = null;
+      let shouldStartImmediately = false;
+      
+      // Если указана задержка в минутах, вычисляем время относительно публикации поста
+      if (scheduledPost.broadcast_delay_minutes !== null && scheduledPost.broadcast_delay_minutes !== undefined) {
+        if (scheduledPost.broadcast_delay_minutes === 0) {
+          // Задержка 0 - отправляем сразу
+          broadcastScheduledAt = new Date();
+          shouldStartImmediately = true;
+          console.log(`⏰ Рассылка будет отправлена сразу`);
+        } else {
+          // Вычисляем время через N минут после публикации
+          const publishTime = new Date();
+          publishTime.setMinutes(publishTime.getMinutes() + scheduledPost.broadcast_delay_minutes);
+          broadcastScheduledAt = publishTime;
+          console.log(`⏰ Рассылка запланирована через ${scheduledPost.broadcast_delay_minutes} минут после публикации: ${broadcastScheduledAt.toLocaleString('ru-RU')}`);
+        }
+      } else if (scheduledPost.broadcast_scheduled_at) {
+        // Если указано конкретное время
+        broadcastScheduledAt = new Date(scheduledPost.broadcast_scheduled_at);
+        const now = new Date();
+        if (broadcastScheduledAt <= now) {
+          // Время уже прошло, отправляем сразу
+          shouldStartImmediately = true;
+          broadcastScheduledAt = now;
+          console.log(`⏰ Время рассылки уже прошло, отправляем сразу`);
+        } else {
+          console.log(`⏰ Рассылка запланирована на: ${broadcastScheduledAt.toLocaleString('ru-RU')}`);
+        }
+      } else {
+        // Если не указано время, отправляем сразу
+        broadcastScheduledAt = new Date();
+        shouldStartImmediately = true;
+        console.log(`⏰ Рассылка будет отправлена сразу`);
+      }
+      
+      // Создаем рассылку
+      const broadcastCampaign = await createBroadcastCampaign(
+        scheduledPost.community_id,
+        scheduledPost.broadcast_message_text,
+        shouldStartImmediately ? null : broadcastScheduledAt // Если сразу, то null (не запланировано)
+      );
+      
+      console.log(`✅ Рассылка создана: ${broadcastCampaign.id}`);
+      
+      // Если нужно запустить сразу
+      if (shouldStartImmediately) {
+        console.log(`🚀 Запуск рассылки сразу...`);
+        const { pool } = require('./database');
+        const communityData = await pool.query(
+          'SELECT access_token FROM user_communities WHERE community_id = $1',
+          [scheduledPost.community_id]
+        );
+        
+        if (communityData.rows && communityData.rows.length > 0) {
+          const accessToken = communityData.rows[0].access_token;
+          // Запускаем рассылку асинхронно, не блокируя публикацию поста
+          sendBroadcastMessages(
+            scheduledPost.community_id,
+            accessToken,
+            scheduledPost.broadcast_message_text,
+            broadcastCampaign.id
+          ).then(result => {
+            console.log(`✅ Рассылка завершена:`, result);
+          }).catch(error => {
+            console.error(`❌ Ошибка в рассылке:`, error);
+          });
+        }
+      }
     }
 
     console.log(`✅ Запланированный пост ${scheduledPost.id} успешно опубликован`);
