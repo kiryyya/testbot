@@ -1453,6 +1453,28 @@ const getBroadcastCampaign = async (campaignId) => {
 };
 
 /**
+ * Удалить рассылку
+ */
+const deleteBroadcastCampaign = async (campaignId) => {
+  try {
+    const result = await pool.query(
+      'DELETE FROM broadcast_campaigns WHERE id = $1 RETURNING *',
+      [campaignId]
+    );
+    
+    if (result.rows.length === 0) {
+      throw new Error('Рассылка не найдена');
+    }
+    
+    console.log(`✅ Рассылка ${campaignId} удалена`);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка удаления рассылки:', error);
+    throw error;
+  }
+};
+
+/**
  * Получить запланированные рассылки, которые нужно запустить
  */
 const getScheduledCampaigns = async () => {
@@ -1638,6 +1660,7 @@ module.exports = {
   addBroadcastLog,
   getBroadcastCampaigns,
   getBroadcastCampaign,
+  deleteBroadcastCampaign,
   getScheduledCampaigns,
   // Функции для запланированных постов
   createScheduledPost,

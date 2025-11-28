@@ -123,6 +123,12 @@ export const apiService = {
     return response.data;
   },
 
+  // Удалить рассылку
+  deleteBroadcast: async (campaignId: string): Promise<ApiResponse<any>> => {
+    const response = await api.delete(`/broadcasts/${campaignId}`);
+    return response.data;
+  },
+
   // ===== API ДЛЯ СОЗДАНИЯ ПОСТОВ =====
 
   // Создать запланированный пост
@@ -152,8 +158,8 @@ export const apiService = {
     return response.data;
   },
 
-  // Получить календарь запланированных событий
-  getCommunityCalendar: async (communityId: number): Promise<ApiResponse<any[]>> => {
+  // Получить события календаря (посты + рассылки)
+  getCalendarEvents: async (communityId: number): Promise<ApiResponse<any[]>> => {
     const response = await api.get(`/communities/${communityId}/calendar`);
     return response.data;
   },

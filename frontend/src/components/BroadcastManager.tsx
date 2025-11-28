@@ -159,6 +159,26 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
     }
   };
 
+  // Удалить рассылку
+  const handleDeleteBroadcast = async (campaignId: string) => {
+    if (!window.confirm('Вы уверены, что хотите удалить эту рассылку? Это действие нельзя отменить.')) {
+      return;
+    }
+
+    try {
+      const response = await apiService.deleteBroadcast(campaignId);
+      if (response.success) {
+        showNotification('Рассылка удалена', 'success');
+        await loadCampaigns();
+      } else {
+        showNotification(response.message || 'Ошибка удаления рассылки', 'error');
+      }
+    } catch (error: any) {
+      console.error('Ошибка удаления рассылки:', error);
+      showNotification(error.response?.data?.message || 'Ошибка удаления рассылки', 'error');
+    }
+  };
+
   // Получить статус рассылки
   const getStatusText = (status: string) => {
     const statusMap: Record<string, string> = {
@@ -313,16 +333,27 @@ const BroadcastManager: React.FC<BroadcastManagerProps> = ({ communityId }) => {
                   <div className="campaign-status" style={{ color: getStatusColor(campaign.status) }}>
                     {getStatusText(campaign.status)}
                   </div>
-                  <div className="campaign-date">
-                    {campaign.scheduled_at ? (
-                      <div>
-                        <div>📅 {new Date(campaign.scheduled_at).toLocaleString('ru-RU')}</div>
-                        <div style={{ fontSize: '12px', color: '#666' }}>
-                          Создано: {new Date(campaign.created_at).toLocaleString('ru-RU')}
+                  <div className="campaign-header-right">
+                    <div className="campaign-date">
+                      {campaign.scheduled_at ? (
+                        <div>
+                          <div>📅 {new Date(campaign.scheduled_at).toLocaleString('ru-RU')}</div>
+                          <div style={{ fontSize: '12px', color: '#666' }}>
+                            Создано: {new Date(campaign.created_at).toLocaleString('ru-RU')}
+                          </div>
                         </div>
-                      </div>
-                    ) : (
-                      new Date(campaign.created_at).toLocaleString('ru-RU')
+                      ) : (
+                        new Date(campaign.created_at).toLocaleString('ru-RU')
+                      )}
+                    </div>
+                    {(campaign.status === 'draft' || campaign.status === 'scheduled') && (
+                      <button
+                        onClick={() => handleDeleteBroadcast(campaign.id)}
+                        className="delete-broadcast-btn"
+                        title="Удалить рассылку"
+                      >
+                        🗑️
+                      </button>
                     )}
                   </div>
                 </div>

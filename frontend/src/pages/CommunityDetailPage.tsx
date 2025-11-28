@@ -9,7 +9,7 @@ import CallbackSetup from '../components/CallbackSetup';
 import BroadcastManager from '../components/BroadcastManager';
 import PostCreator from '../components/PostCreator';
 import ScheduledPostsList from '../components/ScheduledPostsList';
-import CommunityCalendar from '../components/CommunityCalendar';
+import CalendarView from '../components/CalendarView';
 import './CommunityDetailPage.css';
 
 const CommunityDetailPage: React.FC = () => {
@@ -452,9 +452,9 @@ const CommunityDetailPage: React.FC = () => {
           </div>
         )}
 
-        {activeTab === 'calendar' && (
-          <div className="community-content">
-            <CommunityCalendar communityId={community.id} />
+        {activeTab === 'calendar' && communityId && (
+          <div className="community-calendar-section">
+            <CalendarView communityId={parseInt(communityId)} />
           </div>
         )}
 
