@@ -2048,6 +2048,70 @@ app.post('/api/communities/:communityId/settings', async (req, res) => {
   }
 });
 
+// ===== API ДЛЯ КАЛЕНДАРЯ ЗАПЛАНИРОВАННЫХ СОБЫТИЙ =====
+
+// Получить все запланированные события (посты + рассылки) для сообщества
+app.get('/api/communities/:communityId/calendar', async (req, res) => {
+  try {
+    const communityId = parseInt(req.params.communityId);
+    
+    // Получаем запланированные посты
+    const scheduledPosts = await getCommunityScheduledPosts(communityId);
+    
+    // Получаем запланированные рассылки
+    const broadcastCampaigns = await getBroadcastCampaigns(communityId);
+    
+    // Формируем единый список событий
+    const events = [];
+    
+    // Добавляем посты
+    scheduledPosts.forEach(post => {
+      if (post.status === 'scheduled' && post.scheduled_at) {
+        events.push({
+          id: post.id,
+          type: 'post',
+          title: post.post_text.length > 50 ? post.post_text.substring(0, 50) + '...' : post.post_text,
+          description: post.post_text,
+          scheduledAt: post.scheduled_at,
+          status: post.status,
+          gameEnabled: post.game_enabled,
+          hasBroadcast: false
+        });
+      }
+    });
+    
+    // Добавляем рассылки
+    broadcastCampaigns.forEach(campaign => {
+      if (campaign.status === 'scheduled' && campaign.scheduled_at) {
+        events.push({
+          id: campaign.id,
+          type: 'broadcast',
+          title: campaign.message_text.length > 50 ? campaign.message_text.substring(0, 50) + '...' : campaign.message_text,
+          description: campaign.message_text,
+          scheduledAt: campaign.scheduled_at,
+          status: campaign.status,
+          totalRecipients: campaign.total_recipients,
+          sentCount: campaign.sent_count
+        });
+      }
+    });
+    
+    // Сортируем по времени
+    events.sort((a, b) => new Date(a.scheduledAt).getTime() - new Date(b.scheduledAt).getTime());
+    
+    res.json({
+      success: true,
+      data: events
+    });
+  } catch (error) {
+    console.error('❌ Ошибка получения календаря:', error);
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Ошибка получения календаря'
+    });
+  }
+});
+
 // ===== API ДЛЯ СОЗДАНИЯ И ПЛАНИРОВАНИЯ ПОСТОВ =====
 
 // Создать запланированный пост

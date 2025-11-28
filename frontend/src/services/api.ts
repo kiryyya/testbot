@@ -152,6 +152,12 @@ export const apiService = {
     return response.data;
   },
 
+  // Получить календарь запланированных событий
+  getCommunityCalendar: async (communityId: number): Promise<ApiResponse<any[]>> => {
+    const response = await api.get(`/communities/${communityId}/calendar`);
+    return response.data;
+  },
+
 };
 
 export default api;

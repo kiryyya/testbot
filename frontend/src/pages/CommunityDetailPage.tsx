@@ -9,6 +9,7 @@ import CallbackSetup from '../components/CallbackSetup';
 import BroadcastManager from '../components/BroadcastManager';
 import PostCreator from '../components/PostCreator';
 import ScheduledPostsList from '../components/ScheduledPostsList';
+import CommunityCalendar from '../components/CommunityCalendar';
 import './CommunityDetailPage.css';
 
 const CommunityDetailPage: React.FC = () => {
@@ -23,7 +24,7 @@ const CommunityDetailPage: React.FC = () => {
   const [postsLoading, setPostsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [postsError, setPostsError] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'info' | 'create' | 'posts'>('info');
+  const [activeTab, setActiveTab] = useState<'info' | 'create' | 'posts' | 'calendar'>('info');
 
   // Загрузка информации о сообществе
   const loadCommunityInfo = async () => {
@@ -251,6 +252,14 @@ const CommunityDetailPage: React.FC = () => {
             <span className="tab-count">{posts.length}</span>
           )}
         </button>
+        
+        <button
+          className={`tab ${activeTab === 'calendar' ? 'active' : ''}`}
+          onClick={() => setActiveTab('calendar')}
+        >
+          <span className="tab-icon">📅</span>
+          Календарь
+        </button>
       </div>
 
       {/* Основная информация */}
@@ -440,6 +449,12 @@ const CommunityDetailPage: React.FC = () => {
                 loadCommunityPosts();
               }}
             />
+          </div>
+        )}
+
+        {activeTab === 'calendar' && (
+          <div className="community-content">
+            <CommunityCalendar communityId={community.id} />
           </div>
         )}
 
