@@ -164,6 +164,58 @@ export const apiService = {
     return response.data;
   },
 
+  // ===== API ДЛЯ РАБОТЫ С БАЛАНСОМ И ОПЛАТОЙ =====
+
+  // Получить баланс пользователя
+  getUserBalance: async (userId: string): Promise<ApiResponse<{ balance: number; currency: string; user_id: string }>> => {
+    const response = await api.get(`/users/${userId}/balance`);
+    return response.data;
+  },
+
+  // Пополнить счет (мок T-Pay)
+  depositBalance: async (userId: string, amount: number, paymentMethod?: string): Promise<ApiResponse<any>> => {
+    const response = await api.post('/payments/deposit', {
+      userId,
+      amount,
+      paymentMethod: paymentMethod || 'tpay'
+    });
+    return response.data;
+  },
+
+  // Инициировать платеж через T-Pay
+  initiatePayment: async (data: {
+    userId: string;
+    amount: number;
+    returnUrl?: string;
+    description?: string;
+  }): Promise<ApiResponse<{
+    transactionId: string;
+    orderId: string;
+    paymentUrl: string | null;
+    amount: number;
+    status: string;
+    testMode?: boolean;
+    paymentId?: string;
+    tpayResponse?: any;
+    error?: {
+      message: string;
+      code?: string;
+      status?: number;
+      details?: any;
+    };
+  }>> => {
+    const response = await api.post('/payments/initiate', data);
+    return response.data;
+  },
+
+  // Получить историю транзакций
+  getTransactions: async (userId: string, limit?: number, offset?: number): Promise<ApiResponse<any[]>> => {
+    const params = new URLSearchParams();
+    if (limit) params.append('limit', limit.toString());
+    if (offset) params.append('offset', offset.toString());
+    const response = await api.get(`/users/${userId}/transactions?${params.toString()}`);
+    return response.data;
+  },
 };
 
 export default api;

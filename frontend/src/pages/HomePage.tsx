@@ -1,103 +1,115 @@
-import React, { useState, useEffect } from 'react';
-import DataList from '../components/DataList';
-import { apiService } from '../services/api';
-import { UserData } from '../types';
+import React, { useState } from 'react';
 import './HomePage.css';
 
 const HomePage: React.FC = () => {
-  const [data, setData] = useState<UserData[]>([]);
-  const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{
     message: string;
     type: 'success' | 'error';
   } | null>(null);
 
-  // Показать уведомление
-  const showNotification = (message: string, type: 'success' | 'error') => {
-    setNotification({ message, type });
-    setTimeout(() => setNotification(null), 5000);
-  };
-
-  // Загрузить все данные
-  const loadData = async () => {
-    setLoading(true);
-    try {
-      const response = await apiService.getAllData();
-      if (response.success && response.data) {
-        setData(response.data);
-      }
-    } catch (error) {
-      console.error('Ошибка при загрузке данных:', error);
-      showNotification('Ошибка при загрузке данных', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Редактировать запись
-  const handleEdit = (item: UserData) => {
-    // Прокрутка к началу страницы
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
-  // Удалить запись
-  const handleDelete = async (id: string) => {
-    if (!window.confirm('Вы уверены, что хотите удалить эту запись?')) {
-      return;
-    }
-
-    try {
-      const response = await apiService.deleteData(id);
-      if (response.success) {
-        showNotification('Запись успешно удалена!', 'success');
-        await loadData();
-      }
-    } catch (error: any) {
-      console.error('Ошибка при удалении:', error);
-      const errorMessage = error.response?.data?.message || 'Ошибка при удалении записи';
-      showNotification(errorMessage, 'error');
-    }
-  };
-
-  // Загружаем данные при монтировании компонента
-  useEffect(() => {
-    loadData();
-  }, []);
-
   return (
     <div className="home-page">
-      {/* <header className="home-header">
-        <h1>TestBot - Marketing Project</h1>
-        <p>Система управления данными</p>
-        <div className="features-badges">
-          <span className="badge">DATABASE</span>
-          <span className="badge">REAL-TIME</span>
-        </div>
-      </header> */}
+      <header className="home-header">
+        <h1>Добро пожаловать в TestBot</h1>
+        <p className="subtitle">Комплексная платформа для управления сообществами ВКонтакте</p>
+      </header>
 
-      {/* Уведомления */}
+      <main className="home-main">
+        <section className="features-section">
+          <h2>Возможности платформы</h2>
+          
+          <div className="features-grid">
+            <div className="feature-card">
+              <div className="feature-icon">👥</div>
+              <h3>Управление сообществами</h3>
+              <p>Подключайте и управляйте вашими сообществами ВКонтакте. Синхронизируйте участников, настраивайте автоматические рассылки и отслеживайте статистику.</p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">📢</div>
+              <h3>Автоматические рассылки</h3>
+              <p>Создавайте и планируйте массовые рассылки сообщений участникам сообществ. Настраивайте отложенные рассылки с точным временем отправки.</p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">📅</div>
+              <h3>Планирование публикаций</h3>
+              <p>Создавайте посты с автоматической публикацией в указанное время. Настраивайте игры для постов и интегрируйте рассылки с публикациями.</p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">🎮</div>
+              <h3>Игровые механики</h3>
+              <p>Настраивайте интерактивные игры для ваших постов. Управляйте попытками, жизнями, призовыми ключевыми словами и промокодами.</p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">📊</div>
+              <h3>Календарь событий</h3>
+              <p>Просматривайте все запланированные публикации и рассылки в удобном календарном виде. Переключайтесь между месячным и недельным режимами.</p>
+            </div>
+
+            <div className="feature-card">
+              <div className="feature-icon">💳</div>
+              <h3>Платежная система</h3>
+              <p>Пополняйте баланс через интеграцию с T-Pay. Управляйте транзакциями и отслеживайте историю платежей прямо в системе.</p>
+            </div>
+          </div>
+        </section>
+
+        <section className="quick-start-section">
+          <h2>Быстрый старт</h2>
+          <div className="steps">
+            <div className="step">
+              <div className="step-number">1</div>
+              <div className="step-content">
+                <h3>Подключите сообщество</h3>
+                <p>Перейдите в раздел "Сообщества" и добавьте ваше сообщество ВКонтакте, предоставив необходимые права доступа.</p>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-number">2</div>
+              <div className="step-content">
+                <h3>Синхронизируйте участников</h3>
+                <p>Загрузите список участников сообщества в базу данных для последующих рассылок и аналитики.</p>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-number">3</div>
+              <div className="step-content">
+                <h3>Создайте контент</h3>
+                <p>Планируйте публикации постов, настраивайте игры и создавайте рассылки. Все это можно делать с помощью удобного интерфейса.</p>
+              </div>
+            </div>
+            <div className="step">
+              <div className="step-number">4</div>
+              <div className="step-content">
+                <h3>Отслеживайте результаты</h3>
+                <p>Используйте календарь для просмотра всех запланированных событий и аналитику для оценки эффективности.</p>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section className="info-section">
+          <h2>О платформе</h2>
+          <p>
+            TestBot — это современная платформа для автоматизации работы с сообществами ВКонтакте. 
+            Система позволяет эффективно управлять контентом, взаимодействовать с аудиторией и анализировать результаты.
+          </p>
+          <p>
+            Платформа построена на современных технологиях: React, Node.js, PostgreSQL, что обеспечивает 
+            высокую производительность, надежность и масштабируемость.
+          </p>
+        </section>
+      </main>
+
       {notification && (
         <div className={`notification ${notification.type}`}>
           {notification.message}
           <button onClick={() => setNotification(null)}>×</button>
         </div>
       )}
-
-      {/* <main className="home-main"> */}
-        {/* Список данных */}
-        {/* <section> */}
-          {/* <DataList */}
-            {/* data={data} */}
-            {/* onEdit={handleEdit} */}
-            {/* onDelete={handleDelete} */}
-            {/* loading={loading} */}
-          {/* /> */}
-        {/* </section> */}
-      {/* </main> */}
-
-      {/* <footer className="home-footer"> */}
-        {/* <p>Проект на React + Node.js + PostgreSQL</p> */}
-      {/* </footer> */}
     </div>
   );
 };

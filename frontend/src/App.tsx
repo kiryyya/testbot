@@ -83,7 +83,7 @@ function App() {
           ) : (
             // Если авторизован - показываем основное приложение
             <Route path="/" element={<Layout onLogout={handleLogout} />}>
-              {/* <Route index element={<HomePage />} /> */}
+              <Route index element={<HomePage />} />
               <Route path="game-settings" element={<GameSettingsPage />} />
               <Route path="post/:postId/game-settings" element={<PostGameSettingsPage />} />
               <Route path="communities" element={<CommunitiesPage />} />

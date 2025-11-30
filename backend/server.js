@@ -4,6 +4,7 @@ const bodyParser = require('body-parser');
 const { v4: uuidv4 } = require('uuid');
 const axios = require('axios');
 const OpenAI = require('openai');
+const crypto = require('crypto');
 require('dotenv').config({ path: './config.env' });
 
 const { 
@@ -47,7 +48,14 @@ const {
   createScheduledPost,
   getScheduledPosts,
   updateScheduledPost,
-  getCommunityScheduledPosts
+  getCommunityScheduledPosts,
+  // Функции для работы с балансом и кошельком
+  createOrGetUser,
+  getUserBalance,
+  updateUserBalance,
+  createTransaction,
+  getTransactions,
+  updateTransactionStatus
 } = require('./database');
 
 const { sendBroadcastMessages } = require('./broadcast');
@@ -2679,6 +2687,445 @@ app.get('/api/communities/:communityId/calendar', async (req, res) => {
     res.status(500).json({
       success: false,
       message: 'Ошибка получения событий календаря'
+    });
+  }
+});
+
+// ===== API ДЛЯ РАБОТЫ С БАЛАНСОМ И ОПЛАТОЙ =====
+
+/**
+ * Получить баланс пользователя
+ * GET /api/users/:userId/balance
+ */
+app.get('/api/users/:userId/balance', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID пользователя обязателен'
+      });
+    }
+    
+    const balance = await getUserBalance(userId);
+    
+    res.json({
+      success: true,
+      data: balance
+    });
+  } catch (error) {
+    console.error('Ошибка получения баланса:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения баланса'
+    });
+  }
+});
+
+/**
+ * Создать транзакцию пополнения счета (мок T-Pay)
+ * POST /api/payments/deposit
+ * Body: { userId, amount, paymentMethod }
+ */
+app.post('/api/payments/deposit', async (req, res) => {
+  try {
+    const { userId, amount, paymentMethod = 'tpay' } = req.body;
+    
+    if (!userId || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID пользователя и сумма обязательны'
+      });
+    }
+    
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Сумма должна быть больше нуля'
+      });
+    }
+    
+    // Создаем транзакцию со статусом pending
+    const transaction = await createTransaction({
+      user_id: userId,
+      amount: amount,
+      type: 'deposit',
+      status: 'pending',
+      payment_method: paymentMethod,
+      description: `Пополнение счета на ${amount} RUB`,
+      metadata: {
+        source: 'tpay_mock',
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    // В тестовом режиме сразу подтверждаем платеж (мок)
+    // В реальной интеграции здесь будет вызов T-Pay API
+    const mockPaymentId = `TPAY_MOCK_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    
+    // Обновляем статус транзакции на completed
+    await updateTransactionStatus(transaction.id, 'completed', mockPaymentId);
+    
+    // Обновляем баланс пользователя
+    const updatedBalance = await updateUserBalance(userId, amount, 'add');
+    
+    res.json({
+      success: true,
+      message: 'Счет успешно пополнен',
+      data: {
+        transaction: {
+          ...transaction,
+          status: 'completed',
+          payment_id: mockPaymentId
+        },
+        balance: updatedBalance
+      }
+    });
+  } catch (error) {
+    console.error('Ошибка пополнения счета:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка пополнения счета'
+    });
+  }
+});
+
+/**
+ * Создать подпись (Token) для запроса T-Pay
+ * Согласно документации: https://developer.tbank.ru/eacq/api/init
+ * Token формируется из всех параметров запроса (кроме самого Token) + Password
+ * 
+ * Алгоритм:
+ * 1. Берем все параметры кроме Token
+ * 2. Сортируем по ключу
+ * 3. Конкатенируем значения в строку
+ * 4. Добавляем Password в конец
+ * 5. Создаем SHA-256 хеш
+ */
+function createTPayToken(params, password) {
+  // Сортируем параметры по ключу (кроме Token)
+  const paramsForSign = { ...params };
+  delete paramsForSign.Token;
+  
+  const sortedKeys = Object.keys(paramsForSign).sort();
+  
+  // Конвертируем все значения в строки и конкатенируем
+  const valuesString = sortedKeys
+    .map(key => {
+      const value = paramsForSign[key];
+      // Конвертируем в строку, null и undefined в пустую строку
+      return value != null ? String(value) : '';
+    })
+    .join('');
+  
+  // Добавляем Password в конец
+  const stringToSign = valuesString + password;
+  
+  // Создаем SHA-256 хеш
+  const token = crypto.createHash('sha256').update(stringToSign, 'utf8').digest('hex');
+  
+  return token;
+}
+
+/**
+ * Инициировать платеж через T-Pay
+ * POST /api/payments/initiate
+ * Body: { userId, amount, returnUrl, description }
+ * 
+ * Согласно документации: https://developer.tbank.ru/eacq/api/init
+ * Endpoint: POST https://securepay.tinkoff.ru/v2/Init
+ */
+app.post('/api/payments/initiate', async (req, res) => {
+  try {
+    const { userId, amount, returnUrl, description } = req.body;
+    
+    if (!userId || !amount) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID пользователя и сумма обязательны'
+      });
+    }
+    
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Сумма должна быть больше нуля'
+      });
+    }
+    
+    // Создаем транзакцию
+    const transaction = await createTransaction({
+      user_id: userId,
+      amount: amount,
+      type: 'deposit',
+      status: 'pending',
+      payment_method: 'tpay',
+      description: description || `Пополнение счета на ${amount} RUB`,
+      metadata: {
+        returnUrl: returnUrl,
+        timestamp: new Date().toISOString()
+      }
+    });
+    
+    const orderId = `ORDER_${transaction.id}`;
+    const amountInKopecks = Math.round(amount * 100); // Сумма в копейках
+    
+    // Проверяем, есть ли настройки T-Pay
+    const terminalKey = process.env.TPAY_TERMINAL_KEY;
+    const password = process.env.TPAY_PASSWORD;
+    const apiToken = process.env.TPAY_API_TOKEN; // Bearer токен для авторизации
+    const isTestMode = process.env.TPAY_TEST_MODE === 'true' || !terminalKey;
+    
+    // Определяем URL API в зависимости от режима
+    const tpayApiUrl = isTestMode 
+      ? (process.env.TPAY_TEST_API_URL || 'https://rest-api-test.tinkoff.ru/v2/Init')
+      : (process.env.TPAY_API_URL || 'https://securepay.tinkoff.ru/v2/Init');
+    
+    if (isTestMode && !terminalKey) {
+      // ТЕСТОВЫЙ РЕЖИМ БЕЗ КЛЮЧЕЙ: возвращаем мок-данные
+      console.log('🧪 T-Pay: Тестовый режим без ключей, используем мок-данные');
+      
+      // В мок-режиме не возвращаем paymentUrl, чтобы не было редиректа
+      // Frontend обработает это как мок-режим
+      
+      res.json({
+        success: true,
+        data: {
+          transactionId: transaction.id,
+          orderId: orderId,
+          paymentUrl: null, // Нет реального URL в мок-режиме
+          amount: amount,
+          status: 'pending',
+          testMode: true
+        }
+      });
+      return;
+    }
+    
+    // РЕАЛЬНАЯ/ТЕСТОВАЯ ИНТЕГРАЦИЯ: вызов T-Pay API
+    if (!terminalKey || !password) {
+      return res.status(500).json({
+        success: false,
+        message: 'T-Pay не настроен. Укажите TPAY_TERMINAL_KEY и TPAY_PASSWORD в переменных окружения'
+      });
+    }
+    
+    // Подготовка параметров согласно документации
+    const tpayParams = {
+      TerminalKey: terminalKey,
+      Amount: amountInKopecks,
+      OrderId: orderId,
+      Description: description || `Пополнение счета на ${amount} RUB`,
+    };
+    
+    // Добавляем опциональные параметры
+    if (returnUrl) {
+      tpayParams.SuccessURL = returnUrl;
+      tpayParams.FailURL = returnUrl;
+    }
+    
+    if (process.env.TPAY_NOTIFICATION_URL) {
+      tpayParams.NotificationURL = process.env.TPAY_NOTIFICATION_URL;
+    }
+    
+    // Создаем подпись (Token)
+    tpayParams.Token = createTPayToken(tpayParams, password);
+    
+    // Вызов T-Pay API
+    // Production: https://securepay.tinkoff.ru/v2/Init
+    // Test: https://rest-api-test.tinkoff.ru/v2/Init
+    
+    try {
+      const headers = {
+        'Content-Type': 'application/json'
+      };
+      
+      // Добавляем Bearer токен, если указан
+      if (apiToken) {
+        headers['Authorization'] = `Bearer ${apiToken}`;
+      }
+      
+      console.log(`📤 Отправка запроса в T-Pay (${isTestMode ? 'ТЕСТ' : 'PRODUCTION'}):`, {
+        url: tpayApiUrl,
+        orderId: orderId,
+        amount: amountInKopecks,
+        terminalKey: terminalKey,
+        params: JSON.stringify(tpayParams, null, 2)
+      });
+      
+      const tpayResponse = await axios.post(tpayApiUrl, tpayParams, { headers });
+      
+      console.log('✅ Ответ от T-Pay:', {
+        status: tpayResponse.status,
+        statusText: tpayResponse.statusText,
+        data: JSON.stringify(tpayResponse.data, null, 2)
+      });
+      
+      // Проверяем ответ
+      // T-Pay возвращает Success как строку 'True' или 'False', или как boolean
+      const isSuccess = tpayResponse.data?.Success === 'True' || tpayResponse.data?.Success === true;
+      const paymentURL = tpayResponse.data?.PaymentURL || tpayResponse.data?.PaymentUrl;
+      
+      if (tpayResponse.data && isSuccess && paymentURL) {
+        // Сохраняем PaymentId в транзакцию
+        await updateTransactionStatus(
+          transaction.id,
+          'pending',
+          tpayResponse.data.PaymentId || orderId
+        );
+        
+        res.json({
+          success: true,
+          data: {
+            transactionId: transaction.id,
+            orderId: orderId,
+            paymentId: tpayResponse.data.PaymentId,
+            paymentUrl: paymentURL,
+            amount: amount,
+            status: 'pending',
+            testMode: isTestMode,
+            tpayResponse: tpayResponse.data // Для отладки
+          }
+        });
+      } else {
+        // Ошибка от T-Pay
+        const errorMessage = tpayResponse.data?.Message || tpayResponse.data?.Details || 'Неизвестная ошибка T-Pay';
+        
+        await updateTransactionStatus(transaction.id, 'failed');
+        
+        console.error('❌ Ошибка T-Pay:', errorMessage);
+        
+        res.status(400).json({
+          success: false,
+          message: `Ошибка инициализации платежа: ${errorMessage}`,
+          error: tpayResponse.data
+        });
+      }
+    } catch (tpayError) {
+      console.error('❌ Ошибка вызова T-Pay API:', {
+        message: tpayError.message,
+        code: tpayError.code,
+        response: tpayError.response?.data ? JSON.stringify(tpayError.response.data, null, 2) : 'нет данных',
+        status: tpayError.response?.status,
+        statusText: tpayError.response?.statusText,
+        headers: tpayError.response?.headers,
+        request: {
+          url: tpayApiUrl,
+          method: 'POST',
+          data: JSON.stringify(tpayParams, null, 2)
+        }
+      });
+      
+      // Обновляем статус транзакции на failed
+      await updateTransactionStatus(transaction.id, 'failed');
+      
+      // Возвращаем детальную информацию об ошибке
+      const errorMessage = tpayError.response?.data?.Message 
+        || tpayError.response?.data?.Details 
+        || tpayError.message 
+        || 'Неизвестная ошибка T-Pay';
+      
+      res.status(tpayError.response?.status || 500).json({
+        success: false,
+        message: `Ошибка инициализации платежа в T-Pay: ${errorMessage}`,
+        error: {
+          message: errorMessage,
+          code: tpayError.code,
+          status: tpayError.response?.status,
+          details: tpayError.response?.data
+        }
+      });
+    }
+  } catch (error) {
+    console.error('❌ Ошибка инициализации платежа:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка инициализации платежа'
+    });
+  }
+});
+
+/**
+ * Обработать успешный платеж (callback от T-Pay или мок)
+ * POST /api/payments/callback
+ * Body: { transactionId, paymentId, status }
+ */
+app.post('/api/payments/callback', async (req, res) => {
+  try {
+    const { transactionId, paymentId, status } = req.body;
+    
+    if (!transactionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID транзакции обязателен'
+      });
+    }
+    
+    // Получаем транзакцию
+    const transactionResult = await pool.query(
+      'SELECT * FROM transactions WHERE id = $1',
+      [transactionId]
+    );
+    
+    if (transactionResult.rows.length === 0) {
+      return res.status(404).json({
+        success: false,
+        message: 'Транзакция не найдена'
+      });
+    }
+    
+    const transaction = transactionResult.rows[0];
+    
+    // Обновляем статус транзакции
+    await updateTransactionStatus(transactionId, status, paymentId);
+    
+    // Если платеж успешен, обновляем баланс
+    if (status === 'completed' && transaction.status !== 'completed') {
+      await updateUserBalance(transaction.user_id, transaction.amount, 'add');
+    }
+    
+    res.json({
+      success: true,
+      message: 'Статус платежа обновлен'
+    });
+  } catch (error) {
+    console.error('Ошибка обработки callback:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка обработки callback'
+    });
+  }
+});
+
+/**
+ * Получить историю транзакций пользователя
+ * GET /api/users/:userId/transactions?limit=50&offset=0
+ */
+app.get('/api/users/:userId/transactions', async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const limit = parseInt(req.query.limit) || 50;
+    const offset = parseInt(req.query.offset) || 0;
+    
+    if (!userId) {
+      return res.status(400).json({
+        success: false,
+        message: 'ID пользователя обязателен'
+      });
+    }
+    
+    const transactions = await getTransactions(userId, limit, offset);
+    
+    res.json({
+      success: true,
+      data: transactions
+    });
+  } catch (error) {
+    console.error('Ошибка получения транзакций:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Ошибка получения транзакций'
     });
   }
 });

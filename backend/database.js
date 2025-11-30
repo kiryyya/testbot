@@ -355,6 +355,48 @@ const createTable = async () => {
     await pool.query(scheduledPostsQuery);
     console.log('✅ Таблица scheduled_posts создана или уже существует');
 
+    // Таблица пользователей с балансом
+    const usersTableQuery = `
+      CREATE TABLE IF NOT EXISTS users (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(255) NOT NULL UNIQUE,
+        balance DECIMAL(15, 2) DEFAULT 0.00,
+        currency VARCHAR(3) DEFAULT 'RUB',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_users_user_id ON users(user_id);
+    `;
+
+    await pool.query(usersTableQuery);
+    console.log('✅ Таблица users создана или уже существует');
+
+    // Таблица транзакций
+    const transactionsTableQuery = `
+      CREATE TABLE IF NOT EXISTS transactions (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        user_id VARCHAR(255) NOT NULL,
+        amount DECIMAL(15, 2) NOT NULL,
+        type VARCHAR(50) NOT NULL,
+        status VARCHAR(50) DEFAULT 'pending',
+        payment_method VARCHAR(50),
+        payment_id VARCHAR(255),
+        description TEXT,
+        metadata JSONB,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      );
+      
+      CREATE INDEX IF NOT EXISTS idx_transactions_user_id ON transactions(user_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_status ON transactions(status);
+      CREATE INDEX IF NOT EXISTS idx_transactions_payment_id ON transactions(payment_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_created_at ON transactions(created_at);
+    `;
+
+    await pool.query(transactionsTableQuery);
+    console.log('✅ Таблица transactions создана или уже существует');
+
     await pool.query(userDataQuery);
     console.log('✅ Таблица user_data создана или уже существует');
 
@@ -1625,6 +1667,167 @@ const getCommunityScheduledPosts = async (communityId) => {
   }
 };
 
+// ===== ФУНКЦИИ ДЛЯ РАБОТЫ С БАЛАНСОМ И КОШЕЛЬКОМ =====
+
+/**
+ * Создать или получить пользователя с балансом
+ */
+const createOrGetUser = async (userId) => {
+  try {
+    // Проверяем, существует ли пользователь
+    const checkQuery = 'SELECT * FROM users WHERE user_id = $1';
+    const checkResult = await pool.query(checkQuery, [userId]);
+    
+    if (checkResult.rows.length > 0) {
+      return checkResult.rows[0];
+    }
+    
+    // Создаем нового пользователя с нулевым балансом
+    const createQuery = `
+      INSERT INTO users (user_id, balance, currency)
+      VALUES ($1, 0.00, 'RUB')
+      RETURNING *
+    `;
+    const createResult = await pool.query(createQuery, [userId]);
+    console.log(`💰 Создан новый пользователь ${userId} с балансом 0.00 RUB`);
+    return createResult.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при создании/получении пользователя:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить баланс пользователя
+ */
+const getUserBalance = async (userId) => {
+  try {
+    const user = await createOrGetUser(userId);
+    return {
+      balance: parseFloat(user.balance) || 0,
+      currency: user.currency || 'RUB',
+      user_id: user.user_id
+    };
+  } catch (error) {
+    console.error('❌ Ошибка при получении баланса:', error);
+    throw error;
+  }
+};
+
+/**
+ * Обновить баланс пользователя
+ */
+const updateUserBalance = async (userId, amount, operation = 'add') => {
+  try {
+    // Сначала убедимся, что пользователь существует
+    await createOrGetUser(userId);
+    
+    // Обновляем баланс
+    const updateQuery = operation === 'add'
+      ? 'UPDATE users SET balance = balance + $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING *'
+      : 'UPDATE users SET balance = balance - $1, updated_at = CURRENT_TIMESTAMP WHERE user_id = $2 RETURNING *';
+    
+    const result = await pool.query(updateQuery, [amount, userId]);
+    
+    if (result.rows.length === 0) {
+      throw new Error('Пользователь не найден');
+    }
+    
+    return {
+      balance: parseFloat(result.rows[0].balance) || 0,
+      currency: result.rows[0].currency || 'RUB',
+      user_id: result.rows[0].user_id
+    };
+  } catch (error) {
+    console.error('❌ Ошибка при обновлении баланса:', error);
+    throw error;
+  }
+};
+
+/**
+ * Создать транзакцию
+ */
+const createTransaction = async (transactionData) => {
+  try {
+    const {
+      user_id,
+      amount,
+      type, // 'deposit', 'withdrawal', 'payment'
+      status = 'pending',
+      payment_method = 'tpay',
+      payment_id = null,
+      description = null,
+      metadata = null
+    } = transactionData;
+    
+    const query = `
+      INSERT INTO transactions (
+        user_id, amount, type, status, payment_method, 
+        payment_id, description, metadata
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+      RETURNING *
+    `;
+    
+    const values = [
+      user_id,
+      amount,
+      type,
+      status,
+      payment_method,
+      payment_id,
+      description,
+      metadata ? JSON.stringify(metadata) : null
+    ];
+    
+    const result = await pool.query(query, values);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при создании транзакции:', error);
+    throw error;
+  }
+};
+
+/**
+ * Получить историю транзакций пользователя
+ */
+const getTransactions = async (userId, limit = 50, offset = 0) => {
+  try {
+    const query = `
+      SELECT * FROM transactions 
+      WHERE user_id = $1 
+      ORDER BY created_at DESC 
+      LIMIT $2 OFFSET $3
+    `;
+    
+    const result = await pool.query(query, [userId, limit, offset]);
+    return result.rows;
+  } catch (error) {
+    console.error('❌ Ошибка при получении транзакций:', error);
+    throw error;
+  }
+};
+
+/**
+ * Обновить статус транзакции
+ */
+const updateTransactionStatus = async (transactionId, status, paymentId = null) => {
+  try {
+    const query = `
+      UPDATE transactions 
+      SET status = $1, payment_id = COALESCE($2, payment_id), updated_at = CURRENT_TIMESTAMP
+      WHERE id = $3
+      RETURNING *
+    `;
+    
+    const result = await pool.query(query, [status, paymentId, transactionId]);
+    return result.rows[0];
+  } catch (error) {
+    console.error('❌ Ошибка при обновлении статуса транзакции:', error);
+    throw error;
+  }
+};
+
 module.exports = {
   pool,
   createTable,
@@ -1666,5 +1869,12 @@ module.exports = {
   createScheduledPost,
   getScheduledPosts,
   updateScheduledPost,
-  getCommunityScheduledPosts
+  getCommunityScheduledPosts,
+  // Функции для работы с балансом и кошельком
+  createOrGetUser,
+  getUserBalance,
+  updateUserBalance,
+  createTransaction,
+  getTransactions,
+  updateTransactionStatus
 };
